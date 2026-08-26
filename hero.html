@@ -110,20 +110,18 @@
     font-weight: 700;
   }
   .topbar-phone {
-    color: var(--color-pink);
+    color: var(--color-green);
     text-decoration: none;
     font-weight: 700;
-    border-bottom: 1px solid var(--pink-tint-30);
-    padding-bottom: 2px;
-    transition: border-color var(--dur-fast) var(--ease-out), opacity var(--dur-fast) var(--ease-out);
+    transition: opacity var(--dur-fast) var(--ease-out);
   }
-  .topbar-phone:hover { border-color: var(--color-pink); }
+  .topbar-phone:hover { opacity: 0.8; }
   .topbar-phone:focus-visible {
-    outline: 2px solid var(--color-pink);
+    outline: 2px solid var(--color-green);
     outline-offset: 3px;
     border-radius: 3px;
   }
-  .topbar-phone:active { opacity: 0.75; }
+  .topbar-phone:active { opacity: 0.65; }
 
   /* hero */
   .hero {
@@ -227,12 +225,15 @@
 
   .promo-text {
     display: inline-flex;
-    align-items: baseline;
+    align-items: center;
     gap: 6px;
+    background: var(--pink-tint-12);
     color: var(--color-pink);
     font-weight: 700;
-    font-size: 1.05rem;
+    font-size: 1rem;
     letter-spacing: 0.01em;
+    padding: 7px 16px;
+    border-radius: var(--radius-pill);
     margin-bottom: -22px;
   }
   .promo-text svg { width: 16px; height: 16px; flex: none; align-self: center; }
@@ -258,7 +259,7 @@
 
   @media (max-width: 900px) {
     .hero { flex-direction: column; align-items: stretch; }
-    .hero-photo-panel { flex: none; width: 100%; aspect-ratio: 4 / 5; }
+    .hero-photo-panel { flex: none; width: 100%; aspect-ratio: 8 / 5; }
   }
 
   @media (max-width: 640px) {
