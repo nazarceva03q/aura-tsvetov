@@ -258,7 +258,7 @@
   .photo-tag svg { width: 14px; height: 14px; flex: none; }
 
   @media (max-width: 900px) {
-    .hero { flex-direction: column; align-items: stretch; }
+    .hero { flex-direction: column; align-items: stretch; gap: var(--space-lg); }
     .hero-photo-panel { flex: none; width: 100%; aspect-ratio: 8 / 5; }
   }
 
@@ -274,6 +274,272 @@
 
   @media (prefers-reduced-motion: reduce) {
     .btn { transition: none; }
+  }
+
+  /* – categories – */
+  .categories {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: var(--space-3xl) var(--space-md) clamp(56px, 8vw, 96px);
+  }
+  .section-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-style: normal;
+    color: var(--color-green);
+    font-size: clamp(1.6rem, 3.4vw, 2.1rem);
+    margin: 0 0 var(--space-lg);
+  }
+  .cat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-lg);
+  }
+  .cat-card {
+    display: block;
+    width: 100%;
+    background: var(--color-white);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    padding: 0;
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+    transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+  }
+  .cat-card:hover { border-color: var(--color-green); }
+  .cat-card:focus-visible {
+    outline: none;
+    border-color: var(--color-green);
+    box-shadow: 0 0 0 3px var(--green-tint-12);
+  }
+  .cat-card[aria-expanded="true"] { border-color: var(--color-green); box-shadow: 0 0 0 3px var(--green-tint-12); }
+  .cat-photo {
+    aspect-ratio: 4 / 3;
+    background:
+      linear-gradient(155deg, var(--panel-wash-1), var(--panel-wash-2) 45%, var(--panel-wash-3) 100%),
+      var(--color-green);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-sm);
+  }
+  .cat-photo .photo-tag { text-align: center; }
+  .cat-body {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2xs);
+    padding: var(--space-md) var(--space-sm);
+  }
+  .cat-body-text { min-width: 0; }
+  .cat-name {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-style: normal;
+    color: var(--color-green);
+    font-size: 1.15rem;
+    margin: 0;
+  }
+  .cat-price {
+    display: block;
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 1.1rem;
+    color: var(--color-ink);
+    margin-top: 4px;
+  }
+  .cat-chevron {
+    flex: none;
+    width: 22px;
+    height: 22px;
+    color: var(--color-green);
+    transition: transform var(--dur-base) var(--ease-out);
+  }
+  .cat-card[aria-expanded="true"] .cat-chevron { transform: rotate(180deg); }
+
+  .catalog-panel {
+    margin-top: var(--space-lg);
+    background: var(--color-cream);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-lg);
+    animation: catalogIn 0.2s var(--ease-out);
+  }
+  @keyframes catalogIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .catalog-panel-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-style: normal;
+    color: var(--color-green);
+    font-size: 1.3rem;
+    margin: 0 0 var(--space-md);
+  }
+  .product-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-md);
+  }
+  .product-card {
+    background: var(--color-white);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .product-photo {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    background:
+      linear-gradient(155deg, var(--panel-wash-1), var(--panel-wash-2) 45%, var(--panel-wash-3) 100%),
+      var(--color-green);
+    border: none;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-white);
+    opacity: 0.85;
+    cursor: zoom-in;
+    position: relative;
+    transition: opacity var(--dur-fast) var(--ease-out);
+  }
+  .product-photo:hover, .product-photo:focus-visible { opacity: 1; }
+  .product-photo:focus-visible { outline: 2px solid var(--color-white); outline-offset: -4px; }
+  .product-photo svg { width: 28px; height: 28px; }
+  .product-photo .zoom-hint {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.85);
+    color: var(--color-green);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .product-photo .zoom-hint svg { width: 13px; height: 13px; }
+  .product-name {
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--color-ink);
+    margin: 0;
+    padding: var(--space-sm) var(--space-sm) var(--space-2xs);
+  }
+  .btn-sm {
+    min-width: 0;
+    width: calc(100% - 2 * var(--space-2xs));
+    padding: 10px 12px;
+    font-size: 0.88rem;
+    margin: var(--space-2xs);
+    margin-top: auto;
+  }
+
+  /* – lightbox – */
+  .lightbox-dialog {
+    border: none;
+    padding: 0;
+    background: transparent;
+    max-width: min(92vw, 560px);
+    max-height: 90vh;
+  }
+  .lightbox-dialog::backdrop { background: rgba(0, 40, 24, 0.75); }
+  .lightbox-media {
+    width: min(92vw, 560px);
+    aspect-ratio: 1 / 1;
+    border-radius: var(--radius-md);
+    background:
+      linear-gradient(155deg, var(--panel-wash-1), var(--panel-wash-2) 45%, var(--panel-wash-3) 100%),
+      var(--color-green);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-white);
+    position: relative;
+    overflow: hidden;
+  }
+  .lightbox-media img { width: 100%; height: 100%; object-fit: cover; }
+  .lightbox-media svg { width: 64px; height: 64px; opacity: 0.85; }
+  .lightbox-caption {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: var(--space-md);
+    background: linear-gradient(to top, rgba(0,40,24,0.55), transparent);
+    color: var(--color-white);
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 1rem;
+  }
+  .lightbox-close {
+    position: absolute;
+    top: calc(-1 * var(--space-lg));
+    right: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: none;
+    background: var(--color-white);
+    color: var(--color-ink);
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .lightbox-close:focus-visible { outline: 2px solid var(--color-green); outline-offset: 2px; }
+
+  @media (max-width: 480px) {
+    .product-grid { grid-template-columns: 1fr 1fr; gap: var(--space-2xs); }
+    .catalog-panel { padding: var(--space-md); }
+    .lightbox-close { top: var(--space-sm); right: var(--space-sm); }
+  }
+
+  @media (max-width: 720px) {
+    .cat-grid { grid-template-columns: 1fr; }
+    .product-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  /* – floating Max button – */
+  .floating-max {
+    position: fixed;
+    right: var(--space-md);
+    bottom: var(--space-md);
+    z-index: 40;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3xs);
+    background: var(--color-pink);
+    color: var(--color-white);
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 0.95rem;
+    text-decoration: none;
+    padding: 14px 22px;
+    border-radius: var(--radius-pill);
+    box-shadow: 0 10px 24px -10px rgba(0,0,0,0.45);
+    opacity: 0;
+    transform: translateY(12px);
+    pointer-events: none;
+    transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out), background var(--dur-fast) var(--ease-out);
+  }
+  .floating-max.is-visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+  .floating-max:hover { background: #bd6c76; }
+  .floating-max:active { transform: translateY(1px); }
+  .floating-max:focus-visible { outline: 2px solid var(--color-green); outline-offset: 3px; }
+  .floating-max svg { width: 18px; height: 18px; flex: none; }
+
+  @media (max-width: 640px) {
+    .floating-max { right: var(--space-sm); bottom: var(--space-sm); padding: 13px 18px; font-size: 0.88rem; }
   }
 
   /* – lead request modal – */
@@ -332,6 +598,7 @@
   }
 
   .lead-form { display: flex; flex-direction: column; gap: var(--space-md); }
+  .lead-form[hidden] { display: none; }
 
   .field { display: flex; flex-direction: column; gap: var(--space-3xs); }
   .field-label {
@@ -401,6 +668,7 @@
   }
 
   .lead-success { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-sm); }
+  .lead-success[hidden] { display: none; }
   .lead-success-icon {
     width: 48px;
     height: 48px;
@@ -419,6 +687,14 @@
     font-weight: 700;
     line-height: 1.5;
   }
+  .lead-success-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    width: 100%;
+    margin-top: var(--space-2xs);
+  }
+  .lead-success-actions .btn { flex: 1 1 auto; }
 
   @media (max-width: 480px) {
     .lead-dialog { width: 100vw; max-width: 100vw; max-height: 100vh; height: 100%; border-radius: 0; }
@@ -449,9 +725,10 @@
       </span>
 
       <div class="hero-actions">
-        <a class="btn btn-primary" href="#max">Написать в Max</a>
+        <!-- TODO: вставить ссылку на чат после создания бота в Max -->
+        <a class="btn btn-primary" href="#">Написать в Max</a>
         <a class="btn btn-ghost" href="tel:+79033676077">Позвонить</a>
-        <button type="button" class="btn btn-ghost" data-open-lead>Оставить заявку</button>
+        <button type="button" class="btn btn-ghost" data-open-lead data-category="Первый экран">Оставить заявку</button>
       </div>
     </div>
 
@@ -462,6 +739,61 @@
       </span>
     </div>
   </div>
+</section>
+
+<section class="categories" id="categories">
+  <h2 class="section-title">Категории</h2>
+  <div class="cat-grid" id="catGrid">
+    <button type="button" class="cat-card" aria-expanded="false" aria-controls="catalogPanel" data-category="Готовые букеты">
+      <div class="cat-photo">
+        <span class="photo-tag">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="6" width="18" height="14" rx="2"/><circle cx="12" cy="13" r="3.5"/><path d="M8 6l1.5-2h5L16 6"/></svg>
+          Место для фото
+        </span>
+      </div>
+      <div class="cat-body">
+        <div class="cat-body-text">
+          <h3 class="cat-name">Готовые букеты</h3>
+          <span class="cat-price">от ___₽</span>
+        </div>
+        <svg class="cat-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+    </button>
+
+    <button type="button" class="cat-card" aria-expanded="false" aria-controls="catalogPanel" data-category="Цветы поштучно">
+      <div class="cat-photo">
+        <span class="photo-tag">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="6" width="18" height="14" rx="2"/><circle cx="12" cy="13" r="3.5"/><path d="M8 6l1.5-2h5L16 6"/></svg>
+          Место для фото
+        </span>
+      </div>
+      <div class="cat-body">
+        <div class="cat-body-text">
+          <h3 class="cat-name">Цветы поштучно</h3>
+          <span class="cat-price">от ___₽</span>
+        </div>
+        <svg class="cat-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+    </button>
+
+    <button type="button" class="cat-card" aria-expanded="false" aria-controls="catalogPanel" data-category="Композиции в коробках">
+      <div class="cat-photo">
+        <span class="photo-tag">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="6" width="18" height="14" rx="2"/><circle cx="12" cy="13" r="3.5"/><path d="M8 6l1.5-2h5L16 6"/></svg>
+          Место для фото
+        </span>
+      </div>
+      <div class="cat-body">
+        <div class="cat-body-text">
+          <h3 class="cat-name">Композиции в коробках</h3>
+          <span class="cat-price">от ___₽</span>
+        </div>
+        <svg class="cat-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+    </button>
+  </div>
+
+  <div class="catalog-panel" id="catalogPanel" hidden></div>
 </section>
 
 <dialog class="lead-dialog" id="leadDialog" aria-labelledby="leadTitle">
@@ -490,9 +822,9 @@
         </span>
       </label>
 
-      <label class="field" data-field="interest">
-        <span class="field-label">Что интересует</span>
-        <input class="field-input" type="text" name="interest" autocomplete="off" placeholder="Букет, повод, дата (по желанию)">
+      <label class="field" data-field="comment">
+        <span class="field-label">Комментарий / пожелание</span>
+        <input class="field-input" type="text" name="comment" autocomplete="off" placeholder="Пожелание к букету или текст открытки (по желанию)">
       </label>
 
       <label class="field field-checkbox" data-field="consent">
@@ -506,6 +838,10 @@
         </span>
       </label>
 
+      <!-- скрытые поля: подставляются в JS, клиенту не видны -->
+      <input type="hidden" name="category" value="">
+      <input type="hidden" name="product" value="">
+
       <button type="submit" class="btn btn-primary lead-submit">Отправить заявку</button>
     </form>
 
@@ -515,17 +851,35 @@
       </span>
       <h2 class="lead-title">Заявка отправлена</h2>
       <p>Спасибо! Мы свяжемся с вами в течение часа, чтобы уточнить детали заказа.</p>
+      <div class="lead-success-actions">
+        <!-- TODO: вставить ссылку на чат после создания бота в Max -->
+        <a class="btn btn-primary" href="#">Написать в Max</a>
+        <a class="btn btn-ghost" href="tel:+79033676077">Позвонить: +7 903 367-60-77</a>
+      </div>
     </div>
   </div>
 </dialog>
+
+<dialog class="lightbox-dialog" id="lightboxDialog" aria-label="Просмотр фото">
+  <button type="button" class="lightbox-close" data-close-lightbox aria-label="Закрыть">&times;</button>
+  <div class="lightbox-media" id="lightboxMedia"></div>
+</dialog>
+
+<!-- TODO: вставить ссылку на чат после создания бота в Max -->
+<a class="floating-max" href="#" aria-label="Написать в Max">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5c-1.2 0-2.32-.27-3.32-.75L4 21l1.85-4.9A8.46 8.46 0 0 1 3.5 11.5 8.5 8.5 0 0 1 12 3a8.5 8.5 0 0 1 9 8.5z"/></svg>
+  Написать в Max
+</a>
 
 <script>
 (function () {
   var dialog = document.getElementById('leadDialog');
   var form = document.getElementById('leadForm');
   var success = document.getElementById('leadSuccess');
-  var openBtn = document.querySelector('[data-open-lead]');
   var closeBtn = dialog.querySelector('[data-close-lead]');
+  var categoryInput = form.querySelector('input[name="category"]');
+  var productInput = form.querySelector('input[name="product"]');
+  var phoneInput = form.querySelector('input[name="phone"]');
 
   function resetDialog() {
     form.hidden = false;
@@ -536,15 +890,45 @@
     });
   }
 
-  openBtn.addEventListener('click', function () {
+  // Открывает форму заявки и подставляет скрытые category/product —
+  // вызывается и с кнопки hero-блока (общая заявка), и с кнопок «Заказать» в каталоге.
+  function openLeadDialog(opts) {
+    opts = opts || {};
     resetDialog();
+    categoryInput.value = opts.category || '';
+    productInput.value = opts.product || '';
     dialog.showModal();
+  }
+  window.openLeadDialog = openLeadDialog;
+
+  document.querySelectorAll('[data-open-lead]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      openLeadDialog({ category: btn.getAttribute('data-category') || '', product: '' });
+    });
   });
 
   closeBtn.addEventListener('click', function () { dialog.close(); });
 
   dialog.addEventListener('click', function (e) {
     if (e.target === dialog) dialog.close();
+  });
+
+  // — маска телефона: +7 (XXX) XXX-XX-XX —
+  phoneInput.addEventListener('input', function () {
+    var digits = phoneInput.value.replace(/\D/g, '');
+    if (digits[0] === '8') digits = '7' + digits.slice(1);
+    if (digits[0] !== '7') digits = ('7' + digits);
+    digits = digits.slice(0, 11);
+
+    var rest = digits.slice(1);
+    var out = '+7';
+    if (rest.length > 0) out += ' (' + rest.slice(0, 3);
+    if (rest.length >= 3) out += ')';
+    if (rest.length > 3) out += ' ' + rest.slice(3, 6);
+    if (rest.length > 6) out += '-' + rest.slice(6, 8);
+    if (rest.length > 8) out += '-' + rest.slice(8, 10);
+
+    phoneInput.value = rest.length ? out : '';
   });
 
   form.addEventListener('submit', function (e) {
@@ -555,8 +939,8 @@
     var consentField = form.querySelector('[data-field="consent"]');
 
     var nameInput = nameField.querySelector('input');
-    var phoneInput = phoneField.querySelector('input');
     var consentInput = consentField.querySelector('input');
+    var commentInput = form.querySelector('input[name="comment"]');
 
     var phoneDigits = phoneInput.value.replace(/\D/g, '');
 
@@ -574,6 +958,14 @@
       return;
     }
 
+    sendToMaxBot({
+      name: nameInput.value.trim(),
+      phone: phoneInput.value.trim(),
+      comment: commentInput.value.trim(),
+      category: categoryInput.value,
+      product: productInput.value
+    });
+
     form.hidden = true;
     success.hidden = false;
   });
@@ -584,5 +976,151 @@
       if (field) field.classList.remove('is-invalid');
     });
   });
+
+  // — заглушка каталога (пока реальных товаров/фото нет) —
+  var CATALOG = {
+    'Готовые букеты': [1, 2, 3, 4, 5, 6],
+    'Цветы поштучно': [1, 2, 3, 4, 5, 6],
+    'Композиции в коробках': [1, 2, 3, 4, 5, 6]
+  };
+
+  var catGrid = document.getElementById('catGrid');
+  var catalogPanel = document.getElementById('catalogPanel');
+  var cardIconSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="6" width="18" height="14" rx="2"/><circle cx="12" cy="13" r="3.5"/><path d="M8 6l1.5-2h5L16 6"/></svg>';
+  var zoomIconSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z"/><path d="M21 21l-4.3-4.3"/><path d="M11 8v6M8 11h6"/></svg>';
+
+  function renderCatalog(category) {
+    var items = CATALOG[category] || [];
+    var cardsHtml = items.map(function () {
+      return (
+        '<div class="product-card">' +
+          '<button type="button" class="product-photo" data-zoom data-caption="Название">' +
+            cardIconSvg +
+            '<span class="zoom-hint">' + zoomIconSvg + '</span>' +
+          '</button>' +
+          '<p class="product-name">Название</p>' +
+          '<button type="button" class="btn btn-primary btn-sm" data-order-product data-category="' + category + '" data-product="Название">Заказать</button>' +
+        '</div>'
+      );
+    }).join('');
+
+    catalogPanel.innerHTML =
+      '<h3 class="catalog-panel-title">' + category + '</h3>' +
+      '<div class="product-grid">' + cardsHtml + '</div>';
+  }
+
+  catGrid.addEventListener('click', function (e) {
+    var card = e.target.closest('.cat-card');
+    if (!card) return;
+
+    var category = card.getAttribute('data-category');
+    var alreadyOpen = card.getAttribute('aria-expanded') === 'true';
+
+    catGrid.querySelectorAll('.cat-card').forEach(function (c) {
+      c.setAttribute('aria-expanded', 'false');
+    });
+
+    if (alreadyOpen) {
+      catalogPanel.hidden = true;
+      catalogPanel.innerHTML = '';
+      return;
+    }
+
+    card.setAttribute('aria-expanded', 'true');
+    renderCatalog(category);
+    catalogPanel.hidden = false;
+    catalogPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+
+  catalogPanel.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-order-product]');
+    if (!btn) return;
+    openLeadDialog({
+      category: btn.getAttribute('data-category') || '',
+      product: btn.getAttribute('data-product') || ''
+    });
+  });
+
+  // — заглушка отправки в Max —
+  // TODO: MAX_BOT_TOKEN и MAX_OWNER_CHAT_ID должны жить в переменных окружения
+  // СЕРВЕРА (не в этом клиентском JS — токен бота нельзя показывать в браузере).
+  // Пока бот не создан, эта функция только логирует и сохраняет заявку локально.
+  // Когда появится бэкенд: заменить тело функции на
+  //   fetch('/api/send-to-max', { method: 'POST', body: JSON.stringify(data) })
+  // а сам сервер уже должен делать
+  //   POST https://platform-api2.max.ru/messages
+  // с заголовком авторизации на основе MAX_BOT_TOKEN и chat_id = MAX_OWNER_CHAT_ID.
+  // Важно: бот не может писать первым, пока получатель не нажал «Начать» в чате с ним.
+  function buildMaxMessage(data) {
+    var lines = [
+      '🔔 НОВАЯ ЗАЯВКА',
+      'Источник: Сайт → форма → ' + (data.category || 'Общая заявка'),
+      'Имя: ' + data.name,
+      'Телефон: ' + data.phone
+    ];
+    if (data.product) lines.push('Интересовало: ' + data.product);
+    if (data.comment) lines.push('Комментарий: ' + data.comment);
+    return lines.join('\n');
+  }
+
+  function sendToMaxBot(data) {
+    var message = buildMaxMessage(data);
+    console.log('[sendToMaxBot stub]', message, data);
+    try {
+      var log = JSON.parse(localStorage.getItem('aura_leads') || '[]');
+      log.push({ data: data, message: message, ts: new Date().toISOString() });
+      localStorage.setItem('aura_leads', JSON.stringify(log));
+    } catch (e) {}
+  }
+
+  // — лайтбокс: увеличенный просмотр фото каталога —
+  // Сейчас фото — плейсхолдер, поэтому лайтбокс показывает тот же градиент крупнее.
+  // Когда появятся реальные фото (<img> внутри .product-photo), лайтбокс
+  // автоматически подхватит их — ничего в разметке менять не придётся.
+  var lightbox = document.getElementById('lightboxDialog');
+  var lightboxMedia = document.getElementById('lightboxMedia');
+  var lightboxClose = lightbox.querySelector('[data-close-lightbox]');
+
+  function openLightbox(trigger) {
+    var img = trigger.querySelector('img');
+    var caption = trigger.getAttribute('data-caption') || '';
+    if (img) {
+      lightboxMedia.innerHTML = '<img src="' + img.src + '" alt="' + img.alt + '">';
+    } else {
+      lightboxMedia.innerHTML = cardIconSvg;
+    }
+    if (caption) {
+      lightboxMedia.innerHTML += '<span class="lightbox-caption">' + caption + '</span>';
+    }
+    lightbox.showModal();
+  }
+
+  document.addEventListener('click', function (e) {
+    var trigger = e.target.closest('[data-zoom]');
+    if (!trigger) return;
+    openLightbox(trigger);
+  });
+
+  lightboxClose.addEventListener('click', function () { lightbox.close(); });
+  lightbox.addEventListener('click', function (e) {
+    if (e.target === lightbox) lightbox.close();
+  });
+
+  // — плавающая кнопка Max: скрыта на первом экране, появляется начиная с блока «Категории» —
+  // rootMargin поджимает нижний край области наблюдения, чтобы блок «Категории» должен
+  // был реально войти в кадр (а не просто на пиксель показаться снизу при коротком пока
+  // сайте из 2 блоков вместо 9), но при этом не требовал прокрутки «в упор».
+  var floatingMax = document.querySelector('.floating-max');
+  var categoriesSection = document.getElementById('categories');
+  if (floatingMax && categoriesSection && 'IntersectionObserver' in window) {
+    var catObserver = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        floatingMax.classList.toggle('is-visible', entry.isIntersecting);
+      });
+    }, { rootMargin: '0px 0px -15% 0px', threshold: 0 });
+    catObserver.observe(categoriesSection);
+  } else if (floatingMax) {
+    floatingMax.classList.add('is-visible');
+  }
 })();
 </script>
