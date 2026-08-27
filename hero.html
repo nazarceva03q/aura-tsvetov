@@ -509,6 +509,80 @@
     .product-grid { grid-template-columns: repeat(2, 1fr); }
   }
 
+  /* – how we work – */
+  .how-we-work {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 var(--space-md) clamp(56px, 8vw, 96px);
+  }
+  .steps-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-lg);
+  }
+  .step {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-sm);
+  }
+  .step-icon {
+    position: relative;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    border: 1.5px solid var(--color-green);
+    color: var(--color-green);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+  }
+  .step-icon svg { width: 24px; height: 24px; }
+  .step-number {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--color-green);
+    color: var(--color-white);
+    font-family: var(--font-body);
+    font-size: 0.72rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .step-text {
+    color: var(--color-ink);
+    font-size: 1.15rem;
+    line-height: 1.5;
+    margin: 0;
+  }
+  .how-we-work-notes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm) var(--space-xl);
+    margin-top: var(--space-xl);
+    padding-top: var(--space-lg);
+    border-top: 1px solid var(--color-border);
+  }
+  .how-we-work-note {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-3xs);
+    color: var(--color-ink);
+    font-weight: 700;
+    font-size: 0.95rem;
+  }
+  .how-we-work-note svg { width: 16px; height: 16px; color: var(--color-pink); flex: none; }
+
+  @media (max-width: 720px) {
+    .steps-grid { grid-template-columns: 1fr; gap: var(--space-xl); }
+  }
+
   /* – floating Max button – */
   .floating-max {
     position: fixed;
@@ -794,6 +868,54 @@
   </div>
 
   <div class="catalog-panel" id="catalogPanel" hidden></div>
+</section>
+
+<section class="how-we-work" id="howWeWork">
+  <h2 class="section-title">Как мы работаем</h2>
+  <div class="steps-grid">
+    <div class="step">
+      <span class="step-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5c-1.2 0-2.32-.27-3.32-.75L4 21l1.85-4.9A8.46 8.46 0 0 1 3.5 11.5 8.5 8.5 0 0 1 12 3a8.5 8.5 0 0 1 9 8.5z"/></svg>
+        <span class="step-number">1</span>
+      </span>
+      <p class="step-text">Вы выбираете букет или пишете нам о своих пожеланиях</p>
+    </div>
+
+    <div class="step">
+      <span class="step-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="6" width="18" height="14" rx="2"/><circle cx="12" cy="13" r="3.5"/><path d="M8 6l1.5-2h5L16 6"/></svg>
+        <span class="step-number">2</span>
+      </span>
+      <p class="step-text">Мы уточняем у вас детали и присылаем фото букета до отправки</p>
+    </div>
+
+    <div class="step">
+      <span class="step-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="10" width="13" height="8" rx="1.5"/><path d="M15 13h3.5L21 16v2h-6"/><circle cx="7" cy="19" r="1.6"/><circle cx="17.5" cy="19" r="1.6"/></svg>
+        <span class="step-number">3</span>
+      </span>
+      <p class="step-text">Доставляем в удобное для вас время, часы работы 8:00–20:00, ежедневно</p>
+    </div>
+
+    <div class="step">
+      <span class="step-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h16v13H4z"/><path d="M4 7l8 6 8-6"/></svg>
+        <span class="step-number">4</span>
+      </span>
+      <p class="step-text">К каждому заказу — открытка с вашими словами</p>
+    </div>
+  </div>
+
+  <div class="how-we-work-notes">
+    <span class="how-we-work-note">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 6.8L21 11l-6.6 2.2L12 20l-2.4-6.8L3 11l6.6-2.2L12 2z"/></svg>
+      Доставка от 350₽ по городу, бесплатно при заказе от 5000₽
+    </span>
+    <span class="how-we-work-note">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 6.8L21 11l-6.6 2.2L12 20l-2.4-6.8L3 11l6.6-2.2L12 2z"/></svg>
+      Цветы обновляются 3 раза в неделю
+    </span>
+  </div>
 </section>
 
 <dialog class="lead-dialog" id="leadDialog" aria-labelledby="leadTitle">
