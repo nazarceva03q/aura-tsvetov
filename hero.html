@@ -13,30 +13,43 @@
 
 <style>
   :root {
-    /* – brand tokens (strict palette, no deviations) – */
-    --color-green: #005D37;
-    --color-pink: #C97B84;
-    --color-cream: #FBF9F4;
+    /* – color tokens: single source of truth, referenced everywhere, no hardcoded hex in components – */
+    --color-heading: #1F4D3A;
+    --color-text-primary: #3A322C;
+    --color-text-secondary: #6B6558;
+    --color-accent: #C17B84;
+    --color-accent-hover: #A8626B;
+    --color-bg-page: #F5F1E8;
+    --color-bg-card: #EDEFEA;
+    --color-border: #1F4D3A;
+    --color-hairline: #E4E0D3;
     --color-white: #FFFFFF;
-    --color-ink: #1E2B23;
-    --color-border: #E4E0D3;
 
-    /* alpha-only derivatives of the same tokens – no new hues introduced */
-    --green-veil-1: rgba(0, 40, 24, 0.55);
+    /* alpha-only derivatives of the tokens above – no new hues introduced */
+    --green-veil-1: rgba(20, 46, 36, 0.55);
     --white-veil-soft: rgba(255, 255, 255, 0.09);
     --white-veil-faint: rgba(255, 255, 255, 0.05);
-    --cream-veil-faint: rgba(251, 249, 244, 0.06);
-    --ink-veil-10: rgba(30, 43, 35, 0.1);
-    --green-tint-6: rgba(0, 93, 55, 0.06);
-    --green-tint-12: rgba(0, 93, 55, 0.12);
-    --pink-tint-12: rgba(201, 123, 132, 0.15);
-    --pink-tint-30: rgba(201, 123, 132, 0.4);
+    --cream-veil-faint: rgba(245, 241, 232, 0.06);
+    --ink-veil-10: rgba(43, 43, 40, 0.1);
+    --green-tint-6: rgba(31, 77, 58, 0.06);
+    --green-tint-12: rgba(31, 77, 58, 0.12);
+    --green-tint-8: rgba(31, 77, 58, 0.08);
+    --accent-tint-12: rgba(193, 123, 132, 0.15);
+    --accent-tint-30: rgba(193, 123, 132, 0.4);
     --panel-wash-1: rgba(255, 255, 255, 0.86);
     --panel-wash-2: rgba(255, 255, 255, 0.5);
     --panel-wash-3: rgba(255, 255, 255, 0.14);
 
     --font-display: 'Lora', Georgia, 'Times New Roman', serif;
-    --font-body: 'PT Sans', -apple-system, Segoe UI, Arial, sans-serif;
+    --font-body: 'PT Sans', Arial, sans-serif;
+
+    /* type scale — fixed px-equivalent sizes per spec (rem, so it still respects browser zoom) */
+    --fs-h1: 3rem;           /* 48px */
+    --fs-h2: 2rem;            /* 32px */
+    --fs-hero-sub: 1.125rem;  /* 18px */
+    --fs-body: 1rem;           /* 16px */
+    --fs-small: 0.875rem;      /* 14px */
+    --fs-button: 1rem;         /* 16px */
 
     /* 4pt spacing scale */
     --space-3xs: 4px;
@@ -47,38 +60,98 @@
     --space-lg: 32px;
     --space-xl: 48px;
     --space-2xl: 64px;
-    --space-3xl: 96px;
+    --space-3xl: 80px;
 
     --radius-sm: 8px;
     --radius-md: 14px;
     --radius-pill: 999px;
+    --radius-btn: 24px;
 
     --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
     --dur-fast: 150ms;
     --dur-base: 220ms;
+    --ease-entrance: cubic-bezier(0.25, 0.46, 0.45, 0.94);
   }
 
   * { box-sizing: border-box; }
   html, body { overflow-x: clip; }
+  html { scroll-behavior: smooth; }
   body {
     margin: 0;
-    background: var(--color-cream);
-    color: var(--color-ink);
+    background: var(--color-bg-page);
+    color: var(--color-text-primary);
     font-family: var(--font-body);
+    font-weight: 700;
     -webkit-font-smoothing: antialiased;
   }
 
   img { max-width: 100%; display: block; }
 
-  .aura-band {
-    background: var(--color-cream);
+/* – entrance animations: opacity/transform only, ease-out, no bounce – */
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes fadeUpSm { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes fadeScale { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+  @keyframes fadeScalePhoto { from { opacity: 0; transform: scale(1.05); } to { opacity: 1; transform: scale(1); } }
+
+  /* hero: load-triggered, no scroll needed */
+  .brand img { animation: fadeIn 0.4s var(--ease-entrance) both; }
+  .hero h1 { animation: fadeUp 0.4s var(--ease-entrance) 0.1s both; }
+  .hero p.sub { animation: fadeUp 0.4s var(--ease-entrance) 0.2s both; }
+  .promo-text { animation: fadeScale 0.35s var(--ease-entrance) 0.3s both; }
+  .hero-actions .btn:nth-child(1) { animation: fadeUpSm 0.4s var(--ease-entrance) 0.35s both; }
+  .hero-actions .btn:nth-child(2) { animation: fadeUpSm 0.4s var(--ease-entrance) 0.42s both; }
+  .hero-actions .btn:nth-child(3) { animation: fadeUpSm 0.4s var(--ease-entrance) 0.49s both; }
+  .hero-photo-panel { animation: fadeScalePhoto 0.6s var(--ease-entrance) 0.1s both; }
+
+  /* scroll-triggered reveals: fires once via IntersectionObserver, threshold ~0.15-0.2 */
+  .reveal {
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.4s var(--ease-entrance), transform 0.4s var(--ease-entrance);
+  }
+  .reveal.in-view { opacity: 1; transform: none; }
+  .reveal-xs { transform: translateY(8px); }
+
+  .cat-grid .cat-card:nth-child(1) { transition-delay: 0s; }
+  .cat-grid .cat-card:nth-child(2) { transition-delay: 0.1s; }
+  .cat-grid .cat-card:nth-child(3) { transition-delay: 0.2s; }
+
+  .steps-grid .step:nth-child(1) { transition-delay: 0s; }
+  .steps-grid .step:nth-child(2) { transition-delay: 0.2s; }
+  .steps-grid .step:nth-child(3) { transition-delay: 0.4s; }
+
+  .promo-grid .promo-card:nth-child(1) { transition-delay: 0s; }
+  .promo-grid .promo-card:nth-child(2) { transition-delay: 0.08s; }
+  .promo-grid .promo-card:nth-child(3) { transition-delay: 0.16s; }
+  .promo-item-highlight.reveal { transition-delay: 0.24s; }
+
+  .footer-fade {
+    opacity: 0;
+    transition: opacity 0.3s var(--ease-entrance);
+  }
+  .footer-fade.in-view { opacity: 1; }
+
+  /* FAQ: no entrance animation — only a smooth height transition on expand,
+     achieved without JS via a grid-rows trick (0fr closed -> 1fr open) */
+  .faq-answer-wrap {
+    display: grid !important;
+    grid-template-rows: 0fr;
+    overflow: hidden;
+    transition: grid-template-rows 0.3s var(--ease-entrance);
+  }
+  .faq-item[open] .faq-answer-wrap { grid-template-rows: 1fr; }
+  .faq-answer-wrap > .faq-answer { min-height: 0; }
+
+    .aura-band {
+    background: var(--color-bg-page);
     position: relative;
   }
 
   /* top bar */
   .topbar {
-    max-width: 1180px;
+    max-width: 1200px;
     margin: 0 auto;
     padding: var(--space-md) var(--space-md) 0;
     display: flex;
@@ -103,21 +176,22 @@
     display: flex;
     align-items: center;
     gap: var(--space-md);
-    font-size: 1.15rem;
   }
   .topbar-hours {
-    color: var(--color-green);
+    color: var(--color-heading);
     font-weight: 700;
+    font-size: var(--fs-hero-sub);
   }
   .topbar-phone {
-    color: var(--color-green);
-    text-decoration: none;
+    color: var(--color-heading);
     font-weight: 700;
+    font-size: var(--fs-hero-sub);
+    text-decoration: none;
     transition: opacity var(--dur-fast) var(--ease-out);
   }
   .topbar-phone:hover { opacity: 0.8; }
   .topbar-phone:focus-visible {
-    outline: 2px solid var(--color-green);
+    outline: 2px solid var(--color-heading);
     outline-offset: 3px;
     border-radius: 3px;
   }
@@ -125,7 +199,7 @@
 
   /* hero */
   .hero {
-    max-width: 1180px;
+    max-width: 1200px;
     margin: 0 auto;
     padding: clamp(40px, 7vw, 88px) var(--space-md) clamp(56px, 9vw, 104px);
     display: flex;
@@ -144,20 +218,20 @@
     font-family: var(--font-display);
     font-weight: 700;
     font-style: normal;
-    color: var(--color-green);
-    font-size: clamp(2.1rem, 5vw, 3.4rem);
-    line-height: 1.14;
+    color: var(--color-heading);
+    font-size: var(--fs-h1);
+    line-height: 1.15;
     max-width: 16ch;
     margin: 0;
     overflow-wrap: anywhere;
     text-wrap: balance;
   }
   .hero p.sub {
-    font-family: var(--font-display);
-    font-weight: 500;
-    font-size: clamp(1.1rem, 2vw, 1.3rem);
-    line-height: 1.55;
-    color: var(--color-ink);
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: var(--fs-hero-sub);
+    line-height: 1.5;
+    color: var(--color-text-primary);
     max-width: 42ch;
     margin: 0;
   }
@@ -166,10 +240,10 @@
     min-width: 0;
     aspect-ratio: 5 / 4;
     border-radius: var(--radius-md);
-    border: 1px solid var(--color-border);
+    border: 1px solid var(--color-hairline);
     background:
       linear-gradient(155deg, var(--panel-wash-1), var(--panel-wash-2) 45%, var(--panel-wash-3) 100%),
-      var(--color-green);
+      var(--color-heading);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -186,9 +260,11 @@
   .btn {
     font-family: var(--font-body);
     font-weight: 700;
-    font-size: 1rem;
-    border-radius: var(--radius-pill);
-    padding: 15px 28px;
+    font-size: var(--fs-button);
+    line-height: 1;
+    min-height: 48px;
+    border-radius: var(--radius-btn);
+    padding: 14px 28px;
     border: 1.5px solid transparent;
     cursor: pointer;
     text-decoration: none;
@@ -203,32 +279,32 @@
   }
   .btn:active { transform: translateY(1px); }
   .btn:focus-visible {
-    outline: 2px solid var(--color-green);
+    outline: 2px solid var(--color-heading);
     outline-offset: 3px;
   }
 
   .btn-primary {
-    background: var(--color-pink);
+    background: var(--color-accent);
     color: var(--color-white);
     box-shadow: 0 10px 24px -10px rgba(0,0,0,0.45);
   }
-  .btn-primary:hover { background: #bd6c76; box-shadow: 0 14px 28px -10px rgba(0,0,0,0.5); }
-  .btn-primary:disabled { background: #9a8285; cursor: not-allowed; box-shadow: none; }
+  .btn-primary:hover { background: var(--color-accent-hover); box-shadow: 0 14px 28px -10px rgba(0,0,0,0.5); }
+  .btn-primary:disabled { background: var(--color-hairline); color: var(--color-text-secondary); cursor: not-allowed; box-shadow: none; }
 
   .btn-ghost {
     background: transparent;
-    color: var(--color-green);
-    border-color: var(--color-green);
+    color: var(--color-heading);
+    border-color: var(--color-border);
   }
-  .btn-ghost:hover { background: var(--green-tint-6); border-color: var(--color-green); }
+  .btn-ghost:hover { background: var(--green-tint-8); border-color: var(--color-border); }
   .btn-ghost:disabled { color: var(--green-tint-12); border-color: var(--green-tint-12); cursor: not-allowed; }
 
   .promo-text {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    background: var(--pink-tint-12);
-    color: var(--color-pink);
+    background: var(--accent-tint-12);
+    color: var(--color-accent);
     font-weight: 700;
     font-size: 1rem;
     letter-spacing: 0.01em;
@@ -245,9 +321,9 @@
     gap: var(--space-3xs);
     padding: 8px 14px;
     border-radius: var(--radius-pill);
-    border: 1px dashed var(--color-green);
+    border: 1px dashed var(--color-heading);
     background: rgba(255,255,255,0.6);
-    color: var(--color-green);
+    color: var(--color-heading);
     font-size: 0.72rem;
     font-weight: 700;
     letter-spacing: 0.06em;
@@ -263,43 +339,56 @@
   }
 
   @media (max-width: 640px) {
-    .brand img { width: 96px; height: 96px; }
-    .topbar { padding-top: var(--space-sm); }
-    .topbar-hours { display: none; }
-    .hero { padding-top: var(--space-xl); padding-bottom: var(--space-xl); }
-    .hero-actions { flex-direction: column; align-items: stretch; align-self: stretch; }
+    .brand img { width: 68px; height: 68px; }
+    .topbar { padding-top: var(--space-xs); }
+    .topbar-meta { flex-direction: column; align-items: flex-end; text-align: right; gap: 2px; }
+    .topbar-hours, .topbar-phone { font-size: 0.85rem; }
+    .hero { padding-top: var(--space-md); padding-bottom: var(--space-md); gap: var(--space-sm); }
+    .hero-copy { gap: var(--space-xs); }
+    .hero h1 { font-size: clamp(1.5rem, 7.5vw, 1.9rem); line-height: 1.2; }
+    .promo-text { margin-top: var(--space-md); }
+    .hero-actions { flex-direction: column; align-items: stretch; align-self: stretch; gap: var(--space-xs); margin-top: var(--space-sm); }
     .btn { width: 100%; }
     .photo-tag { font-size: 0.66rem; text-align: center; }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .btn { transition: none; }
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-delay: 0s !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      transition-delay: 0s !important;
+      scroll-behavior: auto !important;
+    }
+    .reveal, .reveal-xs, .footer-fade { opacity: 1 !important; transform: none !important; }
   }
 
   /* – categories – */
   .categories {
-    max-width: 1180px;
+    max-width: 1200px;
     margin: 0 auto;
-    padding: var(--space-3xl) var(--space-md) clamp(56px, 8vw, 96px);
+    padding: var(--space-3xl) var(--space-md);
   }
   .section-title {
     font-family: var(--font-display);
     font-weight: 700;
     font-style: normal;
-    color: var(--color-green);
-    font-size: clamp(1.6rem, 3.4vw, 2.1rem);
+    color: var(--color-heading);
+    font-size: var(--fs-h2);
+    line-height: 1.2;
     margin: 0 0 var(--space-lg);
   }
   .cat-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: var(--space-lg);
+    gap: var(--space-md);
   }
   .cat-card {
     display: block;
     width: 100%;
     background: var(--color-white);
-    border: 1px solid var(--color-border);
+    border: 1px solid var(--color-hairline);
     border-radius: var(--radius-md);
     overflow: hidden;
     padding: 0;
@@ -308,23 +397,23 @@
     font-family: inherit;
     transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
   }
-  .cat-card:hover { border-color: var(--color-green); }
+  .cat-card:hover { border-color: var(--color-heading); }
   .cat-card:focus-visible {
     outline: none;
-    border-color: var(--color-green);
+    border-color: var(--color-heading);
     box-shadow: 0 0 0 3px var(--green-tint-12);
   }
-  .cat-card[aria-expanded="true"] { border-color: var(--color-green); box-shadow: 0 0 0 3px var(--green-tint-12); }
+  .cat-card[aria-expanded="true"] { border-color: var(--color-heading); box-shadow: 0 0 0 3px var(--green-tint-12); }
   .cat-photo {
     aspect-ratio: 4 / 3;
     background:
       linear-gradient(155deg, var(--panel-wash-1), var(--panel-wash-2) 45%, var(--panel-wash-3) 100%),
-      var(--color-green);
+      var(--color-heading);
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: var(--space-sm);
   }
+  .cat-photo .photo-tag { margin: 0 var(--space-sm); }
   .cat-photo .photo-tag { text-align: center; }
   .cat-body {
     display: flex;
@@ -338,31 +427,32 @@
     font-family: var(--font-display);
     font-weight: 700;
     font-style: normal;
-    color: var(--color-green);
+    color: var(--color-heading);
     font-size: 1.15rem;
     margin: 0;
   }
   .cat-price {
     display: block;
-    font-family: var(--font-display);
-    font-weight: 500;
-    font-size: 1.1rem;
-    color: var(--color-ink);
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: var(--fs-body);
+    line-height: 1.4;
+    color: var(--color-text-secondary);
     margin-top: 4px;
   }
   .cat-chevron {
     flex: none;
     width: 22px;
     height: 22px;
-    color: var(--color-green);
+    color: var(--color-heading);
     transition: transform var(--dur-base) var(--ease-out);
   }
   .cat-card[aria-expanded="true"] .cat-chevron { transform: rotate(180deg); }
 
   .catalog-panel {
     margin-top: var(--space-lg);
-    background: var(--color-cream);
-    border: 1px solid var(--color-border);
+    background: var(--color-bg-page);
+    border: 1px solid var(--color-hairline);
     border-radius: var(--radius-md);
     padding: var(--space-lg);
     animation: catalogIn 0.2s var(--ease-out);
@@ -375,8 +465,8 @@
     font-family: var(--font-display);
     font-weight: 700;
     font-style: normal;
-    color: var(--color-green);
-    font-size: 1.3rem;
+    color: var(--color-heading);
+    font-size: 1.15rem;
     margin: 0 0 var(--space-md);
   }
   .product-grid {
@@ -386,7 +476,7 @@
   }
   .product-card {
     background: var(--color-white);
-    border: 1px solid var(--color-border);
+    border: 1px solid var(--color-hairline);
     border-radius: var(--radius-sm);
     overflow: hidden;
     display: flex;
@@ -397,7 +487,7 @@
     aspect-ratio: 1 / 1;
     background:
       linear-gradient(155deg, var(--panel-wash-1), var(--panel-wash-2) 45%, var(--panel-wash-3) 100%),
-      var(--color-green);
+      var(--color-heading);
     border: none;
     padding: 0;
     display: flex;
@@ -420,7 +510,7 @@
     height: 22px;
     border-radius: 50%;
     background: rgba(255,255,255,0.85);
-    color: var(--color-green);
+    color: var(--color-heading);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -429,18 +519,94 @@
   .product-name {
     font-family: var(--font-body);
     font-weight: 700;
-    font-size: 0.95rem;
-    color: var(--color-ink);
+    font-size: var(--fs-body);
+    line-height: 1.4;
+    color: var(--color-text-primary);
     margin: 0;
     padding: var(--space-sm) var(--space-sm) var(--space-2xs);
   }
   .btn-sm {
+    min-height: 40px;
+    padding: 10px 20px;
+    font-size: var(--fs-small);
+  }
+  .product-order-btn {
     min-width: 0;
     width: calc(100% - 2 * var(--space-2xs));
-    padding: 10px 12px;
-    font-size: 0.88rem;
     margin: var(--space-2xs);
     margin-top: auto;
+  }
+
+  /* – legal documents (privacy policy / consent) – */
+  .doc-dialog {
+    border: none;
+    border-radius: var(--radius-md);
+    padding: 0;
+    width: min(92vw, 680px);
+    max-height: 85vh;
+    background: var(--color-bg-page);
+    box-shadow: 0 30px 60px -20px rgba(0,0,0,0.35);
+  }
+  .doc-dialog::backdrop { background: rgba(31, 77, 58, 0.55); }
+  .doc-card {
+    position: relative;
+    padding: var(--space-xl) var(--space-lg) var(--space-lg);
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+  .doc-close {
+    position: absolute;
+    top: var(--space-sm);
+    right: var(--space-sm);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--color-hairline);
+    background: var(--color-white);
+    color: var(--color-text-primary);
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+  }
+  .doc-close:hover { background: var(--green-tint-6); border-color: var(--color-heading); }
+  .doc-close:focus-visible { outline: 2px solid var(--color-heading); outline-offset: 2px; }
+  .doc-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: var(--color-heading);
+    font-size: var(--fs-h2);
+    margin: 0 0 var(--space-2xs);
+  }
+  .doc-updated {
+    color: var(--color-text-secondary);
+    font-weight: 400;
+    font-size: var(--fs-small);
+    margin: 0 0 var(--space-lg);
+  }
+  .doc-body h3 {
+    font-family: var(--font-display);
+    color: var(--color-heading);
+    font-weight: 700;
+    font-size: var(--fs-body);
+    margin: var(--space-md) 0 var(--space-2xs);
+  }
+  .doc-body h3:first-child { margin-top: 0; }
+  .doc-body p {
+    margin: 0 0 var(--space-sm);
+    color: var(--color-text-primary);
+    font-weight: 400;
+    font-size: var(--fs-body);
+    line-height: 1.6;
+  }
+  .doc-body a { color: var(--color-heading); }
+
+  @media (max-width: 480px) {
+    .doc-dialog { width: 100vw; max-width: 100vw; max-height: 100vh; height: 100%; border-radius: 0; }
+    .doc-card { max-height: 100vh; padding: var(--space-lg) var(--space-md); }
   }
 
   /* – lightbox – */
@@ -458,7 +624,7 @@
     border-radius: var(--radius-md);
     background:
       linear-gradient(155deg, var(--panel-wash-1), var(--panel-wash-2) 45%, var(--panel-wash-3) 100%),
-      var(--color-green);
+      var(--color-heading);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -489,14 +655,14 @@
     border-radius: 50%;
     border: none;
     background: var(--color-white);
-    color: var(--color-ink);
+    color: var(--color-text-primary);
     font-size: 1.2rem;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
   }
-  .lightbox-close:focus-visible { outline: 2px solid var(--color-green); outline-offset: 2px; }
+  .lightbox-close:focus-visible { outline: 2px solid var(--color-heading); outline-offset: 2px; }
 
   @media (max-width: 480px) {
     .product-grid { grid-template-columns: 1fr 1fr; gap: var(--space-2xs); }
@@ -511,28 +677,28 @@
 
   /* – how we work – */
   .how-we-work {
-    max-width: 1180px;
+    max-width: 1200px;
     margin: 0 auto;
-    padding: 0 var(--space-md) clamp(56px, 8vw, 96px);
+    padding: var(--space-3xl) var(--space-md);
   }
   .steps-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: var(--space-lg);
   }
   .step {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: var(--space-sm);
+    gap: var(--space-xs);
   }
   .step-icon {
     position: relative;
     width: 52px;
     height: 52px;
     border-radius: 50%;
-    border: 1.5px solid var(--color-green);
-    color: var(--color-green);
+    border: 1.5px solid var(--color-heading);
+    color: var(--color-heading);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -546,7 +712,7 @@
     width: 22px;
     height: 22px;
     border-radius: 50%;
-    background: var(--color-green);
+    background: var(--color-heading);
     color: var(--color-white);
     font-family: var(--font-body);
     font-size: 0.72rem;
@@ -556,29 +722,13 @@
     justify-content: center;
   }
   .step-text {
-    color: var(--color-ink);
-    font-size: 1.15rem;
+    font-family: var(--font-body);
+    font-weight: 700;
+    color: var(--color-text-primary);
+    font-size: var(--fs-body);
     line-height: 1.5;
     margin: 0;
   }
-  .how-we-work-notes {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-sm) var(--space-xl);
-    margin-top: var(--space-xl);
-    padding-top: var(--space-lg);
-    border-top: 1px solid var(--color-border);
-  }
-  .how-we-work-note {
-    display: flex;
-    align-items: baseline;
-    gap: var(--space-3xs);
-    color: var(--color-ink);
-    font-weight: 700;
-    font-size: 0.95rem;
-  }
-  .how-we-work-note svg { width: 16px; height: 16px; color: var(--color-pink); flex: none; }
-
   @media (max-width: 720px) {
     .steps-grid { grid-template-columns: 1fr; gap: var(--space-xl); }
   }
@@ -592,28 +742,258 @@
     display: inline-flex;
     align-items: center;
     gap: var(--space-3xs);
-    background: var(--color-pink);
+    background: var(--color-accent);
     color: var(--color-white);
     font-family: var(--font-body);
     font-weight: 700;
-    font-size: 0.95rem;
+    font-size: var(--fs-button);
     text-decoration: none;
-    padding: 14px 22px;
-    border-radius: var(--radius-pill);
+    padding: 14px 24px;
+    border-radius: var(--radius-btn);
     box-shadow: 0 10px 24px -10px rgba(0,0,0,0.45);
     opacity: 0;
     transform: translateY(12px);
     pointer-events: none;
-    transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out), background var(--dur-fast) var(--ease-out);
+    transition: opacity 0.4s var(--ease-entrance), transform 0.4s var(--ease-entrance), background var(--dur-fast) var(--ease-out);
   }
   .floating-max.is-visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
-  .floating-max:hover { background: #bd6c76; }
+  .floating-max:hover { background: var(--color-accent-hover); }
   .floating-max:active { transform: translateY(1px); }
-  .floating-max:focus-visible { outline: 2px solid var(--color-green); outline-offset: 3px; }
+  .floating-max:focus-visible { outline: 2px solid var(--color-heading); outline-offset: 3px; }
   .floating-max svg { width: 18px; height: 18px; flex: none; }
 
   @media (max-width: 640px) {
     .floating-max { right: var(--space-sm); bottom: var(--space-sm); padding: 13px 18px; font-size: 0.88rem; }
+  }
+
+  /* – promotions – */
+  .promotions {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--space-3xl) var(--space-md);
+  }
+
+  @media (max-width: 768px) {
+    .categories, .how-we-work, .promotions { padding-top: var(--space-xl); padding-bottom: var(--space-xl); }
+  }
+
+  .promo-item-icon {
+    flex: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 1.5px solid var(--color-heading);
+    color: var(--color-heading);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .promo-item-icon svg { width: 15px; height: 15px; }
+  .promo-item-text {
+    display: flex;
+    align-items: flex-start;
+    font-family: var(--font-body);
+    font-weight: 700;
+    color: var(--color-text-primary);
+    font-size: var(--fs-body);
+    line-height: 1.4;
+    margin: 0;
+  }
+  .promo-spark {
+    flex: none;
+    color: var(--color-accent);
+    font-size: 1em;
+    margin-right: var(--space-2xs);
+  }
+
+  /* group 1: the three simple perks, as a row of cards – mirrors .steps-grid */
+  .promo-group-main { margin-bottom: var(--space-2xl); }
+  .promo-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    justify-content: space-between;
+    gap: var(--space-lg);
+    margin-bottom: var(--space-lg);
+  }
+  .promo-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-xs);
+  }
+  /* auto-width on desktop — a stretched «сосиска» button reads as a mobile pattern misapplied to a wide screen */
+
+  /* group 2: preorder – its own visually separated block */
+  .promo-item-highlight {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    background: var(--color-bg-card);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+    margin: 0 calc(-1 * var(--space-md));
+  }
+  .promo-item-row {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-xs);
+  }
+  .promo-item-row .promo-item-text { flex: 1 1 auto; min-width: 0; }
+  .promo-item-highlight .promo-item-icon { margin-top: 2px; }  .promo-preorder-btn { align-self: flex-start; }
+
+  @media (max-width: 720px) {
+    .promo-grid { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 480px) {
+    .promo-cta-wide { width: 100%; }
+  }
+
+  @media (max-width: 640px) {
+    .promo-preorder-btn { width: 100%; height: 48px; padding: 14px 28px; font-size: var(--fs-button); }
+    .promo-item-highlight { padding: var(--space-sm); margin: 0 calc(-1 * var(--space-sm)); }
+  }
+
+/* – reviews – */
+  .reviews {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--space-3xl) var(--space-md);
+  }
+  .review-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+    background: var(--color-white);
+    border: 1px solid var(--color-hairline);
+    border-radius: var(--radius-md);
+    padding: var(--space-sm) var(--space-md);
+    text-decoration: none;
+    transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+  }
+  .review-badge:hover { border-color: var(--color-heading); }
+  .review-badge:focus-visible { outline: 2px solid var(--color-heading); outline-offset: 3px; }
+  .review-stars {
+    display: inline-flex;
+    gap: 2px;
+    flex: none;
+  }
+  .review-stars svg { width: 18px; height: 18px; }
+  .review-stars .is-filled { color: var(--color-accent); }
+  .review-stars .is-empty { color: var(--color-hairline); }
+  .review-badge-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .review-score {
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: var(--color-heading);
+    font-size: var(--fs-hero-sub);
+    line-height: 1.2;
+  }
+  .review-source {
+    color: var(--color-text-secondary);
+    font-weight: 700;
+    font-size: var(--fs-small);
+  }
+
+    /* – FAQ – */
+  .faq {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: var(--space-3xl) var(--space-md);
+  }
+  .faq-list { display: flex; flex-direction: column; gap: var(--space-sm); }
+  .faq-item {
+    background: var(--color-white);
+    border: 1px solid var(--color-hairline);
+    border-radius: var(--radius-md);
+    padding: 0 var(--space-md);
+  }
+  .faq-item summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    padding: var(--space-md) 0;
+    color: var(--color-heading);
+    font-weight: 700;
+    font-size: var(--fs-body);
+    cursor: pointer;
+    list-style: none;
+  }
+  .faq-item summary::-webkit-details-marker { display: none; }
+  .faq-item summary:focus-visible { outline: 2px solid var(--color-heading); outline-offset: 3px; }
+  .faq-chevron {
+    flex: none;
+    width: 20px;
+    height: 20px;
+    color: var(--color-heading);
+    transition: transform var(--dur-base) var(--ease-out);
+  }
+  .faq-item[open] .faq-chevron { transform: rotate(180deg); }
+  .faq-answer {
+    margin: 0;
+    padding-bottom: var(--space-md);
+    color: var(--color-text-primary);
+    font-weight: 700;
+    font-size: var(--fs-body);
+    line-height: 1.5;
+  }
+
+  /* – footer – */
+  .site-footer {
+    background: var(--color-bg-card);
+    border-top: 1px solid var(--color-hairline);
+  }
+  .site-footer-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--space-xl) var(--space-md);
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-lg);
+  }
+  .footer-col h3 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: var(--color-heading);
+    font-size: var(--fs-body);
+    margin: 0 0 var(--space-sm);
+  }
+  .footer-col p, .footer-col address {
+    margin: 0 0 var(--space-2xs);
+    color: var(--color-text-primary);
+    font-weight: 400;
+    font-size: var(--fs-small);
+    line-height: 1.6;
+    font-style: normal;
+  }
+  .footer-col a {
+    color: var(--color-text-primary);
+    text-decoration: none;
+    border-bottom: 1px solid var(--color-hairline);
+  }
+  .footer-col a:hover { border-color: var(--color-heading); }
+  .footer-legal {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--space-md) var(--space-md) var(--space-xl);
+    border-top: 1px solid var(--color-hairline);
+  }
+  .footer-legal p {
+    margin: var(--space-sm) 0 0;
+    color: var(--color-text-secondary);
+    font-weight: 400;
+    font-size: var(--fs-small);
+    line-height: 1.5;
+  }
+  .footer-legal a { color: var(--color-heading); }
+
+  @media (max-width: 720px) {
+    .site-footer-inner { grid-template-columns: 1fr; gap: var(--space-lg); }
   }
 
   /* – lead request modal – */
@@ -624,7 +1004,7 @@
     width: min(92vw, 460px);
     max-height: 88vh;
     overflow-y: auto;
-    background: var(--color-cream);
+    background: var(--color-bg-page);
     box-shadow: 0 30px 60px -20px rgba(0, 40, 24, 0.35);
   }
   .lead-dialog::backdrop {
@@ -641,9 +1021,9 @@
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    border: 1px solid var(--color-border);
+    border: 1px solid var(--color-hairline);
     background: var(--color-white);
-    color: var(--color-ink);
+    color: var(--color-text-primary);
     font-size: 1.1rem;
     line-height: 1;
     cursor: pointer;
@@ -652,22 +1032,24 @@
     justify-content: center;
     transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
   }
-  .lead-close:hover { background: var(--green-tint-6); border-color: var(--color-green); }
-  .lead-close:focus-visible { outline: 2px solid var(--color-green); outline-offset: 2px; }
+  .lead-close:hover { background: var(--green-tint-6); border-color: var(--color-heading); }
+  .lead-close:focus-visible { outline: 2px solid var(--color-heading); outline-offset: 2px; }
   .lead-close:active { transform: translateY(1px); }
 
   .lead-title {
     font-family: var(--font-display);
     font-weight: 700;
     font-style: normal;
-    color: var(--color-green);
+    color: var(--color-heading);
     font-size: clamp(1.4rem, 4vw, 1.75rem);
     margin: 0 0 var(--space-2xs);
   }
   .lead-sub {
-    font-size: 1.15rem;
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: var(--fs-body);
     line-height: 1.5;
-    color: var(--color-ink);
+    color: var(--color-text-primary);
     margin: 0 0 var(--space-lg);
   }
 
@@ -676,38 +1058,39 @@
 
   .field { display: flex; flex-direction: column; gap: var(--space-3xs); }
   .field-label {
-    font-size: 0.88rem;
+    font-size: var(--fs-small);
     font-weight: 700;
-    color: var(--color-ink);
+    color: var(--color-text-primary);
   }
   .field-input {
     font-family: var(--font-body);
+    font-weight: 700;
     font-size: 1rem;
     padding: 13px 14px;
     border-radius: var(--radius-sm);
-    border: 1.5px solid var(--color-border);
+    border: 1.5px solid var(--color-hairline);
     background: var(--color-white);
-    color: var(--color-ink);
+    color: var(--color-text-primary);
     transition: border-color var(--dur-fast) var(--ease-out);
   }
-  .field-input::placeholder { color: var(--color-ink); opacity: 0.4; }
-  .field-input:hover { border-color: var(--color-green); }
+  .field-input::placeholder { color: var(--color-text-primary); opacity: 0.4; }
+  .field-input:hover { border-color: var(--color-heading); }
   .field-input:focus-visible {
     outline: none;
-    border-color: var(--color-green);
+    border-color: var(--color-heading);
     box-shadow: 0 0 0 3px var(--green-tint-12);
   }
   .field.is-invalid .field-input {
-    border-color: var(--color-pink);
-    box-shadow: 0 0 0 3px var(--pink-tint-12);
+    border-color: var(--color-text-primary);
+    box-shadow: 0 0 0 3px var(--ink-veil-10);
   }
   .field-error {
     display: none;
     align-items: center;
     gap: 6px;
-    font-size: 0.85rem;
+    font-size: var(--fs-small);
     font-weight: 700;
-    color: var(--color-pink);
+    color: var(--color-text-primary);
   }
   .field-error svg { width: 14px; height: 14px; flex: none; }
   .field.is-invalid .field-error { display: flex; }
@@ -721,21 +1104,31 @@
     width: 20px;
     height: 20px;
     margin-top: 2px;
-    accent-color: var(--color-green);
+    accent-color: var(--color-heading);
     flex: none;
   }
   .field-checkbox .consent-text {
-    font-size: 0.88rem;
+    font-size: var(--fs-small);
+    font-weight: 700;
     line-height: 1.45;
-    color: var(--color-ink);
+    color: var(--color-text-secondary);
   }
-  .field-checkbox a { color: var(--color-green); }
+  .field-checkbox a { color: var(--color-heading); }
   .field-checkbox .field-error { margin-top: var(--space-3xs); }
+
+  .field-honeypot {
+    position: absolute;
+    left: -9999px;
+    top: auto;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
 
   .lead-submit { width: 100%; margin-top: var(--space-2xs); }
   .lead-submit[disabled] {
-    background: var(--color-border);
-    color: var(--color-ink);
+    background: var(--color-hairline);
+    color: var(--color-text-primary);
     opacity: 0.55;
     cursor: not-allowed;
     box-shadow: none;
@@ -748,7 +1141,7 @@
     height: 48px;
     border-radius: 50%;
     background: var(--green-tint-12);
-    color: var(--color-green);
+    color: var(--color-heading);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -756,8 +1149,9 @@
   .lead-success-icon svg { width: 24px; height: 24px; }
   .lead-success p {
     margin: 0;
-    color: var(--color-green);
-    font-size: 1.15rem;
+    color: var(--color-text-primary);
+    font-family: var(--font-body);
+    font-size: var(--fs-body);
     font-weight: 700;
     line-height: 1.5;
   }
@@ -794,7 +1188,6 @@
       <p class="sub">Присылаем фото букета до отправки, доставка курьером в удобное для вас время.</p>
 
       <span class="promo-text">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 6.8L21 11l-6.6 2.2L12 20l-2.4-6.8L3 11l6.6-2.2L12 2z"/></svg>
         Скидка 10% на первый заказ
       </span>
 
@@ -818,7 +1211,7 @@
 <section class="categories" id="categories">
   <h2 class="section-title">Категории</h2>
   <div class="cat-grid" id="catGrid">
-    <button type="button" class="cat-card" aria-expanded="false" aria-controls="catalogPanel" data-category="Готовые букеты">
+    <button type="button" class="cat-card reveal" aria-expanded="false" aria-controls="catalogPanel" data-category="Готовые букеты">
       <div class="cat-photo">
         <span class="photo-tag">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="6" width="18" height="14" rx="2"/><circle cx="12" cy="13" r="3.5"/><path d="M8 6l1.5-2h5L16 6"/></svg>
@@ -834,7 +1227,7 @@
       </div>
     </button>
 
-    <button type="button" class="cat-card" aria-expanded="false" aria-controls="catalogPanel" data-category="Цветы поштучно">
+    <button type="button" class="cat-card reveal" aria-expanded="false" aria-controls="catalogPanel" data-category="Цветы поштучно">
       <div class="cat-photo">
         <span class="photo-tag">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="6" width="18" height="14" rx="2"/><circle cx="12" cy="13" r="3.5"/><path d="M8 6l1.5-2h5L16 6"/></svg>
@@ -850,7 +1243,7 @@
       </div>
     </button>
 
-    <button type="button" class="cat-card" aria-expanded="false" aria-controls="catalogPanel" data-category="Композиции в коробках">
+    <button type="button" class="cat-card reveal" aria-expanded="false" aria-controls="catalogPanel" data-category="Композиции в коробках">
       <div class="cat-photo">
         <span class="photo-tag">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="6" width="18" height="14" rx="2"/><circle cx="12" cy="13" r="3.5"/><path d="M8 6l1.5-2h5L16 6"/></svg>
@@ -873,7 +1266,7 @@
 <section class="how-we-work" id="howWeWork">
   <h2 class="section-title">Как мы работаем</h2>
   <div class="steps-grid">
-    <div class="step">
+    <div class="step reveal">
       <span class="step-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5c-1.2 0-2.32-.27-3.32-.75L4 21l1.85-4.9A8.46 8.46 0 0 1 3.5 11.5 8.5 8.5 0 0 1 12 3a8.5 8.5 0 0 1 9 8.5z"/></svg>
         <span class="step-number">1</span>
@@ -881,7 +1274,7 @@
       <p class="step-text">Вы выбираете букет или пишете нам о своих пожеланиях</p>
     </div>
 
-    <div class="step">
+    <div class="step reveal">
       <span class="step-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="6" width="18" height="14" rx="2"/><circle cx="12" cy="13" r="3.5"/><path d="M8 6l1.5-2h5L16 6"/></svg>
         <span class="step-number">2</span>
@@ -889,7 +1282,7 @@
       <p class="step-text">Мы уточняем у вас детали и присылаем фото букета до отправки</p>
     </div>
 
-    <div class="step">
+    <div class="step reveal">
       <span class="step-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="10" width="13" height="8" rx="1.5"/><path d="M15 13h3.5L21 16v2h-6"/><circle cx="7" cy="19" r="1.6"/><circle cx="17.5" cy="19" r="1.6"/></svg>
         <span class="step-number">3</span>
@@ -897,26 +1290,117 @@
       <p class="step-text">Доставляем в удобное для вас время, часы работы 8:00–20:00, ежедневно</p>
     </div>
 
-    <div class="step">
-      <span class="step-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h16v13H4z"/><path d="M4 7l8 6 8-6"/></svg>
-        <span class="step-number">4</span>
+  </div>
+</section>
+
+<section class="promotions" id="promotions">
+  <h2 class="section-title">Акции</h2>
+
+  <div class="promo-group-main">
+    <div class="promo-grid">
+      <div class="promo-card reveal reveal-xs">
+        <p class="promo-item-text"><span class="promo-spark" aria-hidden="true">✦</span>Скидка 10% на первый заказ</p>
+      </div>
+
+      <div class="promo-card reveal reveal-xs">
+        <p class="promo-item-text"><span class="promo-spark" aria-hidden="true">✦</span>Бесплатная доставка от 5000₽</p>
+      </div>
+
+      <div class="promo-card reveal reveal-xs">
+        <p class="promo-item-text"><span class="promo-spark" aria-hidden="true">✦</span>Открытка к каждому заказу</p>
+      </div>
+    </div>
+
+    <a class="btn btn-primary promo-cta-wide" href="#categories">Выбрать букет</a>
+  </div>
+
+  <div class="promo-item-highlight reveal reveal-xs">
+    <div class="promo-item-row">
+      <span class="promo-item-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M8 3v4M16 3v4"/></svg>
       </span>
-      <p class="step-text">К каждому заказу — открытка с вашими словами</p>
+      <p class="promo-item-text">Предзаказ к праздникам по фиксированной цене: 8 марта, 1 мая, 1 сентября, 14 февраля</p>
+    </div>
+    <button type="button" class="btn btn-ghost btn-sm promo-preorder-btn" data-open-lead data-source="Акции → предзаказ">Оставить заявку на предзаказ</button>
+  </div>
+</section>
+
+<section class="reviews" id="reviews">
+  <h2 class="section-title">Отзывы</h2>
+  <a class="review-badge reveal" href="https://yandex.ru/maps/org/aura/235676666509/reviews/" target="_blank" rel="noopener">
+    <span class="review-stars"><svg class="is-filled" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.9 6.6 7.1.7-5.4 4.8 1.6 7-6.2-3.8-6.2 3.8 1.6-7-5.4-4.8 7.1-.7z"/></svg><svg class="is-filled" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.9 6.6 7.1.7-5.4 4.8 1.6 7-6.2-3.8-6.2 3.8 1.6-7-5.4-4.8 7.1-.7z"/></svg><svg class="is-filled" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.9 6.6 7.1.7-5.4 4.8 1.6 7-6.2-3.8-6.2 3.8 1.6-7-5.4-4.8 7.1-.7z"/></svg><svg class="is-filled" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.9 6.6 7.1.7-5.4 4.8 1.6 7-6.2-3.8-6.2 3.8 1.6-7-5.4-4.8 7.1-.7z"/></svg><svg class="is-empty" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2.5l2.9 6.6 7.1.7-5.4 4.8 1.6 7-6.2-3.8-6.2 3.8 1.6-7-5.4-4.8 7.1-.7z"/></svg></span>
+    <span class="review-badge-text">
+      <span class="review-score">4.2 · 13 оценок</span>
+      <span class="review-source">Яндекс Карты</span>
+    </span>
+  </a>
+</section>
+
+<section class="faq" id="faq">
+  <h2 class="section-title">Вопросы и ответы</h2>
+  <div class="faq-list">
+    <details class="faq-item">
+      <summary>Как быстро привезёте букет?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="faq-answer-wrap"><p class="faq-answer">Доставляем в течение дня в часы работы, с 8:00 до 20:00. Точное время согласуем с вами при подтверждении заказа.</p></div>
+    </details>
+    <details class="faq-item">
+      <summary>Почему на сайте нет точной цены букета?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="faq-answer-wrap"><p class="faq-answer">Цены на цветы меняются, поэтому на сайте указан ориентир «от». Точную стоимость подтвердим при оформлении заказа.</p></div>
+    </details>
+    <details class="faq-item">
+      <summary>Можно ли добавить открытку с пожеланием?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="faq-answer-wrap"><p class="faq-answer">Да, открытка идёт бесплатно к каждому заказу. Текст пожелания можно указать при оформлении заявки.</p></div>
+    </details>
+    <details class="faq-item">
+      <summary>Что если я не уверен(а), что букет подойдёт?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="faq-answer-wrap"><p class="faq-answer">Перед отправкой всегда присылаем фото готового букета, чтобы вы могли согласовать состав заранее.</p></div>
+    </details>
+    <details class="faq-item">
+      <summary>Как ухаживать за букетом, чтобы дольше стоял?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="faq-answer-wrap"><p class="faq-answer">Меняйте воду каждые 1–2 дня, обновляйте срез стеблей, держите подальше от батарей и прямого солнца.</p></div>
+    </details>
+    <details class="faq-item">
+      <summary>Как оплатить заказ?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="faq-answer-wrap"><p class="faq-answer">Наличными курьеру или переводом при получении.</p></div>
+    </details>
+    <details class="faq-item">
+      <summary>Доставляете ли за город или в конкретный район?<svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="faq-answer-wrap"><p class="faq-answer">Уточним зону доставки при оформлении заказа.</p></div>
+    </details>
+  </div>
+</section>
+
+<footer class="site-footer footer-fade">
+  <div class="site-footer-inner">
+    <div class="footer-col">
+      <h3>Цветочный магазин Аура</h3>
+      <address>
+        <p>ИП Алимпиев Дмитрий Артурович</p>
+        <p>ИНН 560903131285</p>
+        <p>ОГРНИП 304560900600029</p>
+      </address>
+    </div>
+
+    <div class="footer-col">
+      <h3>Контакты</h3>
+      <p>г. Оренбург, ул. С. Лазо, 8/1</p>
+      <p><a href="tel:+79033676077">+7 903 367-60-77</a></p>
+      <p>E-mail: уточняется</p>
+      <p>Ежедневно 8:00–20:00</p>
+    </div>
+
+    <div class="footer-col">
+      <h3>Информация</h3>
+      <p><a href="#" data-open-doc="privacyDialog">Политика конфиденциальности</a></p>
+      <p><a href="#categories">Категории</a></p>
+      <p><a href="#howWeWork">Как мы работаем</a></p>
     </div>
   </div>
 
-  <div class="how-we-work-notes">
-    <span class="how-we-work-note">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 6.8L21 11l-6.6 2.2L12 20l-2.4-6.8L3 11l6.6-2.2L12 2z"/></svg>
-      Доставка от 350₽ по городу, бесплатно при заказе от 5000₽
-    </span>
-    <span class="how-we-work-note">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 6.8L21 11l-6.6 2.2L12 20l-2.4-6.8L3 11l6.6-2.2L12 2z"/></svg>
-      Цветы обновляются 3 раза в неделю
-    </span>
+  <div class="footer-legal" id="privacy">
+    <p>Продолжая пользоваться сайтом и отправляя заявку, вы соглашаетесь на обработку персональных данных в соответствии с политикой конфиденциальности и требованиями 152-ФЗ.</p>
   </div>
-</section>
+</footer>
 
 <dialog class="lead-dialog" id="leadDialog" aria-labelledby="leadTitle">
   <div class="lead-card">
@@ -952,7 +1436,7 @@
       <label class="field field-checkbox" data-field="consent">
         <input type="checkbox" name="consent" required>
         <span class="consent-text">
-          Согласен(на) на <a href="#privacy" target="_blank" rel="noopener">обработку персональных данных</a> в соответствии с политикой конфиденциальности (152-ФЗ)
+          Согласен(на) на <a href="#" data-open-doc="consentDialog">обработку персональных данных</a> в соответствии с политикой конфиденциальности (152-ФЗ)
           <span class="field-error">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
             Нужно согласие на обработку данных
@@ -963,6 +1447,14 @@
       <!-- скрытые поля: подставляются в JS, клиенту не видны -->
       <input type="hidden" name="category" value="">
       <input type="hidden" name="product" value="">
+      <input type="hidden" name="source" value="">
+
+      <!-- honeypot: настоящие посетители это поле не видят и не заполняют -->
+      <div class="field-honeypot" aria-hidden="true">
+        <label>Оставьте это поле пустым
+          <input type="text" name="website" tabindex="-1" autocomplete="off">
+        </label>
+      </div>
 
       <button type="submit" class="btn btn-primary lead-submit">Отправить заявку</button>
     </form>
@@ -987,6 +1479,80 @@
   <div class="lightbox-media" id="lightboxMedia"></div>
 </dialog>
 
+<dialog class="doc-dialog" id="privacyDialog" aria-labelledby="privacyDialogTitle">
+  <div class="doc-card">
+    <button type="button" class="doc-close" data-close-doc aria-label="Закрыть">&times;</button>
+    <h2 class="doc-title" id="privacyDialogTitle">Политика конфиденциальности</h2>
+    <p class="doc-updated">Действует с 28 августа 2026 года</p>
+    <div class="doc-body">
+      <h3>1. Общие положения</h3>
+      <p>Настоящая Политика конфиденциальности (далее — Политика) действует в отношении всей информации, которую сайт «Аура цветов» (далее — Сайт) может получить о пользователе во время использования Сайта, включая оформление заявки на заказ.</p>
+
+      <h3>2. Оператор персональных данных</h3>
+      <p>Оператором персональных данных является ИП Алимпиев Дмитрий Артурович, ИНН 560903131285, ОГРНИП 304560900600029, адрес: г. Оренбург, ул. С. Лазо, 8/1, телефон: +7 903 367-60-77.</p>
+
+      <h3>3. Какие данные собираются</h3>
+      <p>При оформлении заявки на Сайте могут собираться: имя, номер телефона, комментарий к заказу (в том числе текст для открытки). Сайт не запрашивает и не хранит платёжные данные — оплата происходит наличными курьеру или переводом при получении.</p>
+
+      <h3>4. Цели обработки персональных данных</h3>
+      <p>Персональные данные обрабатываются исключительно для связи с пользователем, уточнения деталей заказа, его оформления, доставки и информирования о статусе заказа.</p>
+
+      <h3>5. Правовые основания обработки</h3>
+      <p>Обработка осуществляется на основании согласия пользователя, предоставляемого при заполнении формы на Сайте, в соответствии с Федеральным законом от 27.07.2006 № 152-ФЗ «О персональных данных».</p>
+
+      <h3>6. Передача данных третьим лицам</h3>
+      <p>Оператор не передаёт персональные данные пользователя третьим лицам, за исключением случаев, необходимых для выполнения заказа (например, для доставки), либо предусмотренных законодательством РФ.</p>
+
+      <h3>7. Срок обработки</h3>
+      <p>Данные обрабатываются в течение времени, необходимого для выполнения заказа, и в пределах сроков хранения, установленных законодательством, либо до отзыва согласия пользователем.</p>
+
+      <h3>8. Права пользователя</h3>
+      <p>Пользователь вправе в любой момент отозвать согласие на обработку персональных данных, запросить информацию о хранящихся данных, потребовать их уточнения или удаления, обратившись по телефону +7 903 367-60-77.</p>
+
+      <h3>9. Меры защиты данных</h3>
+      <p>Оператор принимает необходимые организационные и технические меры для защиты персональных данных пользователя от неправомерного доступа, изменения, раскрытия или уничтожения.</p>
+
+      <h3>10. Изменение Политики</h3>
+      <p>Оператор вправе вносить изменения в настоящую Политику. Актуальная редакция всегда доступна на Сайте.</p>
+
+      <h3>11. Контакты</h3>
+      <p>По всем вопросам, связанным с обработкой персональных данных, можно обратиться по телефону +7 903 367-60-77.</p>
+    </div>
+  </div>
+</dialog>
+
+<dialog class="doc-dialog" id="consentDialog" aria-labelledby="consentDialogTitle">
+  <div class="doc-card">
+    <button type="button" class="doc-close" data-close-doc aria-label="Закрыть">&times;</button>
+    <h2 class="doc-title" id="consentDialogTitle">Согласие на обработку персональных данных</h2>
+    <p class="doc-updated">Действует с 28 августа 2026 года</p>
+    <div class="doc-body">
+      <p>Заполняя форму заявки на Сайте и устанавливая отметку «Согласен(на)», пользователь подтверждает своё согласие на обработку персональных данных на следующих условиях.</p>
+
+      <h3>1. Оператор</h3>
+      <p>Согласие даётся ИП Алимпиев Дмитрий Артурович, ИНН 560903131285, ОГРНИП 304560900600029, г. Оренбург, ул. С. Лазо, 8/1.</p>
+
+      <h3>2. Состав данных</h3>
+      <p>Имя, номер телефона, а также иные данные, добровольно указанные в форме заявки (комментарий, пожелание к заказу).</p>
+
+      <h3>3. Цель обработки</h3>
+      <p>Связь с пользователем для уточнения и выполнения заказа на цветочную продукцию, доставка заказа, информирование о его статусе.</p>
+
+      <h3>4. Действия с персональными данными</h3>
+      <p>Согласие даётся на сбор, запись, систематизацию, накопление, хранение, уточнение, использование, передачу (в объёме, необходимом для доставки заказа), блокирование, удаление и уничтожение персональных данных — как с использованием средств автоматизации, так и без них.</p>
+
+      <h3>5. Срок действия согласия</h3>
+      <p>Согласие действует с момента отправки формы и до момента выполнения заказа, а также в течение сроков хранения данных, установленных законодательством РФ, если пользователь не отзовёт согласие раньше.</p>
+
+      <h3>6. Отзыв согласия</h3>
+      <p>Согласие может быть отозвано пользователем в любой момент по телефону +7 903 367-60-77 или иным способом, позволяющим достоверно установить волеизъявление пользователя.</p>
+
+      <h3>7. Правовое основание</h3>
+      <p>Обработка персональных данных осуществляется в соответствии с Федеральным законом от 27.07.2006 № 152-ФЗ «О персональных данных» и <a href="#" data-open-doc="privacyDialog">Политикой конфиденциальности</a> Сайта.</p>
+    </div>
+  </div>
+</dialog>
+
 <!-- TODO: вставить ссылку на чат после создания бота в Max -->
 <a class="floating-max" href="#" aria-label="Написать в Max">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5c-1.2 0-2.32-.27-3.32-.75L4 21l1.85-4.9A8.46 8.46 0 0 1 3.5 11.5 8.5 8.5 0 0 1 12 3a8.5 8.5 0 0 1 9 8.5z"/></svg>
@@ -1001,7 +1567,9 @@
   var closeBtn = dialog.querySelector('[data-close-lead]');
   var categoryInput = form.querySelector('input[name="category"]');
   var productInput = form.querySelector('input[name="product"]');
+  var sourceInput = form.querySelector('input[name="source"]');
   var phoneInput = form.querySelector('input[name="phone"]');
+  var honeypotInput = form.querySelector('input[name="website"]');
 
   function resetDialog() {
     form.hidden = false;
@@ -1012,20 +1580,26 @@
     });
   }
 
-  // Открывает форму заявки и подставляет скрытые category/product —
-  // вызывается и с кнопки hero-блока (общая заявка), и с кнопок «Заказать» в каталоге.
+  // Открывает форму заявки и подставляет скрытые category/product/source –
+  // вызывается с кнопки hero-блока (общая заявка), с кнопок «Заказать» в каталоге
+  // и с кнопки «Оставить заявку на предзаказ» в блоке «Акции».
   function openLeadDialog(opts) {
     opts = opts || {};
     resetDialog();
     categoryInput.value = opts.category || '';
     productInput.value = opts.product || '';
+    sourceInput.value = opts.source || '';
     dialog.showModal();
   }
   window.openLeadDialog = openLeadDialog;
 
   document.querySelectorAll('[data-open-lead]').forEach(function (btn) {
     btn.addEventListener('click', function () {
-      openLeadDialog({ category: btn.getAttribute('data-category') || '', product: '' });
+      openLeadDialog({
+        category: btn.getAttribute('data-category') || '',
+        product: '',
+        source: btn.getAttribute('data-source') || ''
+      });
     });
   });
 
@@ -1035,7 +1609,7 @@
     if (e.target === dialog) dialog.close();
   });
 
-  // — маска телефона: +7 (XXX) XXX-XX-XX —
+  // – маска телефона: +7 (XXX) XXX-XX-XX –
   phoneInput.addEventListener('input', function () {
     var digits = phoneInput.value.replace(/\D/g, '');
     if (digits[0] === '8') digits = '7' + digits.slice(1);
@@ -1055,6 +1629,14 @@
 
   form.addEventListener('submit', function (e) {
     e.preventDefault();
+
+    // honeypot: настоящие посетители никогда не заполняют это скрытое поле –
+    // если оно не пустое, заявку прислал бот. Тихо «принимаем» её, ничего не отправляя.
+    if (honeypotInput && honeypotInput.value) {
+      form.hidden = true;
+      success.hidden = false;
+      return;
+    }
 
     var nameField = form.querySelector('[data-field="name"]');
     var phoneField = form.querySelector('[data-field="phone"]');
@@ -1085,7 +1667,8 @@
       phone: phoneInput.value.trim(),
       comment: commentInput.value.trim(),
       category: categoryInput.value,
-      product: productInput.value
+      product: productInput.value,
+      source: sourceInput.value
     });
 
     form.hidden = true;
@@ -1099,7 +1682,7 @@
     });
   });
 
-  // — заглушка каталога (пока реальных товаров/фото нет) —
+  // – заглушка каталога (пока реальных товаров/фото нет) –
   var CATALOG = {
     'Готовые букеты': [1, 2, 3, 4, 5, 6],
     'Цветы поштучно': [1, 2, 3, 4, 5, 6],
@@ -1121,7 +1704,7 @@
             '<span class="zoom-hint">' + zoomIconSvg + '</span>' +
           '</button>' +
           '<p class="product-name">Название</p>' +
-          '<button type="button" class="btn btn-primary btn-sm" data-order-product data-category="' + category + '" data-product="Название">Заказать</button>' +
+          '<button type="button" class="btn btn-primary btn-sm product-order-btn" data-order-product data-category="' + category + '" data-product="Название">Заказать</button>' +
         '</div>'
       );
     }).join('');
@@ -1163,9 +1746,9 @@
     });
   });
 
-  // — заглушка отправки в Max —
+  // – заглушка отправки в Max –
   // TODO: MAX_BOT_TOKEN и MAX_OWNER_CHAT_ID должны жить в переменных окружения
-  // СЕРВЕРА (не в этом клиентском JS — токен бота нельзя показывать в браузере).
+  // СЕРВЕРА (не в этом клиентском JS – токен бота нельзя показывать в браузере).
   // Пока бот не создан, эта функция только логирует и сохраняет заявку локально.
   // Когда появится бэкенд: заменить тело функции на
   //   fetch('/api/send-to-max', { method: 'POST', body: JSON.stringify(data) })
@@ -1176,7 +1759,7 @@
   function buildMaxMessage(data) {
     var lines = [
       '🔔 НОВАЯ ЗАЯВКА',
-      'Источник: Сайт → форма → ' + (data.category || 'Общая заявка'),
+      'Источник: Сайт → форма → ' + (data.source || data.category || 'Общая заявка'),
       'Имя: ' + data.name,
       'Телефон: ' + data.phone
     ];
@@ -1195,10 +1778,10 @@
     } catch (e) {}
   }
 
-  // — лайтбокс: увеличенный просмотр фото каталога —
-  // Сейчас фото — плейсхолдер, поэтому лайтбокс показывает тот же градиент крупнее.
+  // – лайтбокс: увеличенный просмотр фото каталога –
+  // Сейчас фото – плейсхолдер, поэтому лайтбокс показывает тот же градиент крупнее.
   // Когда появятся реальные фото (<img> внутри .product-photo), лайтбокс
-  // автоматически подхватит их — ничего в разметке менять не придётся.
+  // автоматически подхватит их – ничего в разметке менять не придётся.
   var lightbox = document.getElementById('lightboxDialog');
   var lightboxMedia = document.getElementById('lightboxMedia');
   var lightboxClose = lightbox.querySelector('[data-close-lightbox]');
@@ -1228,7 +1811,7 @@
     if (e.target === lightbox) lightbox.close();
   });
 
-  // — плавающая кнопка Max: скрыта на первом экране, появляется начиная с блока «Категории» —
+  // – плавающая кнопка Max: скрыта на первом экране, появляется начиная с блока «Категории» –
   // rootMargin поджимает нижний край области наблюдения, чтобы блок «Категории» должен
   // был реально войти в кадр (а не просто на пиксель показаться снизу при коротком пока
   // сайте из 2 блоков вместо 9), но при этом не требовал прокрутки «в упор».
@@ -1244,5 +1827,46 @@
   } else if (floatingMax) {
     floatingMax.classList.add('is-visible');
   }
+
+// — scroll-ревил: показывает карточки/шаги/пункты один раз при первом попадании в кадр —
+  var revealEls = document.querySelectorAll('.reveal, .footer-fade');
+  if ('IntersectionObserver' in window) {
+    var revealObserver = new IntersectionObserver(function (entries, obs) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('in-view');
+          obs.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.18 });
+    revealEls.forEach(function (el) { revealObserver.observe(el); });
+  } else {
+    revealEls.forEach(function (el) { el.classList.add('in-view'); });
+  }
+
+    // — юридические документы (политика конфиденциальности / согласие) —
+  document.addEventListener('click', function (e) {
+    var trigger = e.target.closest('[data-open-doc]');
+    if (!trigger) return;
+    e.preventDefault();
+    var dialogId = trigger.getAttribute('data-open-doc');
+    var dialog = document.getElementById(dialogId);
+    if (!dialog) return;
+    var openDocs = document.querySelectorAll('.doc-dialog[open]');
+    var hadOpenOther = false;
+    openDocs.forEach(function (d) { if (d !== dialog) { d.close(); hadOpenOther = true; } });
+    if (hadOpenOther) {
+      setTimeout(function () { dialog.showModal(); }, 0);
+    } else {
+      dialog.showModal();
+    }
+  });
+
+  document.querySelectorAll('.doc-dialog').forEach(function (dialog) {
+    dialog.querySelector('[data-close-doc]').addEventListener('click', function () { dialog.close(); });
+    dialog.addEventListener('click', function (e) {
+      if (e.target === dialog) dialog.close();
+    });
+  });
 })();
 </script>
