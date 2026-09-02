@@ -1,0 +1,17 @@
+{
+  "name": "aura-tsvetov-bot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Бот \"Аура цветов\" в Max: меню, заказы, вопросы, интеграция с сайтом",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "setup-webhook": "node scripts/setup-webhook.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
