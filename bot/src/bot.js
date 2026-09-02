@@ -129,7 +129,7 @@ async function startOrderFlow(userId, productId) {
   const product = catalog.getProductById(productId);
   if (!product) return sendMainMenu(userId);
 
-  store.setSession(userId, {
+  await store.setSession(userId, {
     step: 'order_awaiting_contact',
     order: {
       productId: product.id,
@@ -172,7 +172,7 @@ async function handleOrderAwaitingContact(update, userId, session) {
   if (autoName) {
     session.order.autoName = autoName;
     session.step = 'order_awaiting_name';
-    store.setSession(userId, session);
+    await store.setSession(userId, session);
     await maxApi.sendMessage(
       { userId },
       'Ваше имя: ' + autoName + '. Всё верно?\n\nЕсли нет — просто напишите, как к вам обращаться.',
@@ -180,7 +180,7 @@ async function handleOrderAwaitingContact(update, userId, session) {
     );
   } else {
     session.step = 'order_awaiting_name';
-    store.setSession(userId, session);
+    await store.setSession(userId, session);
     await maxApi.sendMessage({ userId }, 'Как вас зовут?');
   }
 }
@@ -198,7 +198,7 @@ async function finishOrder(userId, name, session) {
     { userId },
     'Спасибо, ' + name + '! Свяжемся с вами в ближайшее время, а перед отправкой пришлём фото букета'
   );
-  store.clearSession(userId);
+  await store.clearSession(userId);
 }
 
 async function handleOrderAwaitingName(update, userId, session) {
@@ -219,7 +219,7 @@ async function handleOrderAwaitingName(update, userId, session) {
 // ---------- «Заказать звонок» ----------
 
 async function startCallFlow(userId) {
-  store.setSession(userId, { step: 'call_awaiting_contact' });
+  await store.setSession(userId, { step: 'call_awaiting_contact' });
   await maxApi.sendMessage(
     { userId },
     'Оставьте номер, перезвоним в течение часа. 🎁 Скидка 10% на первый заказ',
@@ -246,13 +246,13 @@ async function handleCallAwaitingContact(update, userId) {
     interestedIn: 'просит перезвонить'
   });
   await maxApi.sendMessage({ userId }, 'Спасибо! Скоро перезвоним');
-  store.clearSession(userId);
+  await store.clearSession(userId);
 }
 
 // ---------- «Задать вопрос» ----------
 
 async function startQuestionFlow(userId) {
-  store.setSession(userId, { step: 'awaiting_question' });
+  await store.setSession(userId, { step: 'awaiting_question' });
   await maxApi.sendMessage({ userId }, 'Напишите ваш вопрос, ответим как можно скорее');
 }
 
@@ -264,7 +264,7 @@ async function handleAwaitingQuestion(update, userId) {
   }
 
   const questionId = 'q' + Date.now();
-  store.saveQuestion(questionId, userId, text.trim());
+  await store.saveQuestion(questionId, userId, text.trim());
 
   if (config.ownerChatId) {
     await maxApi.sendMessage(
@@ -277,17 +277,17 @@ async function handleAwaitingQuestion(update, userId) {
   }
 
   await maxApi.sendMessage({ userId }, 'Спасибо, передали ваш вопрос!');
-  store.clearSession(userId);
+  await store.clearSession(userId);
 }
 
 // Олеся нажала «Ответить» под вопросом
 async function startAnswerFlow(ownerUserId, questionId) {
-  const question = store.getQuestion(questionId);
+  const question = await store.getQuestion(questionId);
   if (!question) {
     await maxApi.sendMessage({ userId: ownerUserId }, 'Этот вопрос не найден — возможно, уже отвечен или устарел.');
     return;
   }
-  store.setSession(ownerUserId, { step: 'awaiting_answer', answeringQuestionId: questionId });
+  await store.setSession(ownerUserId, { step: 'awaiting_answer', answeringQuestionId: questionId });
   await maxApi.sendMessage({ userId: ownerUserId }, 'Напишите текст ответа:');
 }
 
@@ -297,17 +297,17 @@ async function handleAwaitingAnswer(update, ownerUserId, session) {
     await maxApi.sendMessage({ userId: ownerUserId }, 'Напишите ответ одним сообщением, пожалуйста.');
     return;
   }
-  const question = store.getQuestion(session.answeringQuestionId);
+  const question = await store.getQuestion(session.answeringQuestionId);
   if (!question) {
     await maxApi.sendMessage({ userId: ownerUserId }, 'Не нашла исходный вопрос — возможно, он устарел.');
-    store.clearSession(ownerUserId);
+    await store.clearSession(ownerUserId);
     return;
   }
 
   await maxApi.sendMessage({ userId: question.userId }, '💬 Ответ на ваш вопрос:\n\n' + text.trim());
-  store.markQuestionAnswered(session.answeringQuestionId);
+  await store.markQuestionAnswered(session.answeringQuestionId);
   await maxApi.sendMessage({ userId: ownerUserId }, 'Ответ отправлен!');
-  store.clearSession(ownerUserId);
+  await store.clearSession(ownerUserId);
 }
 
 // ---------- диспетчер апдейтов ----------
@@ -354,7 +354,7 @@ async function handleUpdate(update) {
 
     // – всё остальное (текстовые сообщения и оставшиеся callback'и вроде
     //   name_confirm) разбирается по текущему шагу сессии пользователя –
-    const session = store.getSession(userId);
+    const session = await store.getSession(userId);
 
     switch (session.step) {
       case 'order_awaiting_contact':

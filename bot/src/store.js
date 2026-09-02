@@ -1,89 +1,103 @@
-// Простое файловое хранилище на JSON – без базы данных, как и просили
-// в ТЗ («не полноценная CRM», «без долгой истории переписки»). Для объёма
-// заявок цветочного магазина этого достаточно; если объём вырастет,
-// заменить на настоящую БД – все обращения идут через этот единственный
-// модуль, переделать будет несложно.
+// Хранилище данных бота: клиенты (для проверки повторных заказов), вопросы
+// (пара «вопрос → user_id», без истории переписки) и сессии диалога (на
+// каком шаге сценария сейчас человек).
+//
+// Два режима, переключаются автоматически по наличию YC_S3_BUCKET:
+//   – ЛОКАЛЬНЫЕ ФАЙЛЫ (bot/data/*.json) – для VM/локальной разработки,
+//     где процесс работает постоянно и диск не исчезает между запросами.
+//   – Yandex Object Storage (S3-совместимое API) – ОБЯЗАТЕЛЬНО для Cloud
+//     Functions: там нет постоянного диска между вызовами функции, и без
+//     внешнего хранилища бот «забывал» бы, на каком шаге диалога находится
+//     собеседник, уже между двумя соседними сообщениями.
+//
+// Все функции асинхронные (даже локально-файловый режим — для единообразия
+// вызовов что на VM, что в Cloud Functions).
 
 const fs = require('fs');
 const path = require('path');
+const config = require('./config');
+const objectStorage = require('./objectStorage');
+
+const USE_S3 = Boolean(config.s3.bucket);
 
 const DATA_DIR = path.join(__dirname, '..', 'data');
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+if (!USE_S3 && !fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
-function filePath(name) {
-  return path.join(DATA_DIR, name + '.json');
-}
-
-function readJson(name, fallback) {
+async function readJson(name, fallback) {
+  if (USE_S3) {
+    return objectStorage.getJson(config.s3, name + '.json', fallback);
+  }
   try {
-    const raw = fs.readFileSync(filePath(name), 'utf8');
-    return JSON.parse(raw);
+    return JSON.parse(fs.readFileSync(path.join(DATA_DIR, name + '.json'), 'utf8'));
   } catch (e) {
     return fallback;
   }
 }
 
-function writeJson(name, data) {
-  // Запись через временный файл + rename – чтобы не оставить битый JSON,
-  // если процесс упадёт посреди записи.
-  const tmp = filePath(name) + '.tmp';
+async function writeJson(name, data) {
+  if (USE_S3) {
+    return objectStorage.putJson(config.s3, name + '.json', data);
+  }
+  const filePath = path.join(DATA_DIR, name + '.json');
+  const tmp = filePath + '.tmp';
   fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf8');
-  fs.renameSync(tmp, filePath(name));
+  fs.renameSync(tmp, filePath);
+  return true;
 }
 
 // – Повторные заказы: телефон (11 цифр, без форматирования) → дата первого обращения –
-function checkAndRecordCustomer(phoneDigits) {
-  const customers = readJson('customers', {});
+async function checkAndRecordCustomer(phoneDigits) {
+  const customers = await readJson('customers', {});
   const existing = customers[phoneDigits];
   if (existing) {
     return { isRepeat: true, firstSeen: existing.firstSeen };
   }
   customers[phoneDigits] = { firstSeen: new Date().toISOString() };
-  writeJson('customers', customers);
+  await writeJson('customers', customers);
   return { isRepeat: false, firstSeen: null };
 }
 
 // – Вопросы: пара «вопрос → user_id автора», без истории переписки –
-function saveQuestion(questionId, userId, questionText) {
-  const questions = readJson('questions', {});
+async function saveQuestion(questionId, userId, questionText) {
+  const questions = await readJson('questions', {});
   questions[questionId] = {
     userId,
     question: questionText,
     answered: false,
     createdAt: new Date().toISOString()
   };
-  writeJson('questions', questions);
+  await writeJson('questions', questions);
 }
 
-function getQuestion(questionId) {
-  const questions = readJson('questions', {});
+async function getQuestion(questionId) {
+  const questions = await readJson('questions', {});
   return questions[questionId] || null;
 }
 
-function markQuestionAnswered(questionId) {
-  const questions = readJson('questions', {});
+async function markQuestionAnswered(questionId) {
+  const questions = await readJson('questions', {});
   if (questions[questionId]) {
     questions[questionId].answered = true;
-    writeJson('questions', questions);
+    await writeJson('questions', questions);
   }
 }
 
 // – Состояние диалога с конкретным пользователем (шаг сценария, что уже собрано) –
-function getSession(userId) {
-  const sessions = readJson('sessions', {});
+async function getSession(userId) {
+  const sessions = await readJson('sessions', {});
   return sessions[userId] || { step: 'idle' };
 }
 
-function setSession(userId, session) {
-  const sessions = readJson('sessions', {});
+async function setSession(userId, session) {
+  const sessions = await readJson('sessions', {});
   sessions[userId] = session;
-  writeJson('sessions', sessions);
+  await writeJson('sessions', sessions);
 }
 
-function clearSession(userId) {
-  const sessions = readJson('sessions', {});
+async function clearSession(userId) {
+  const sessions = await readJson('sessions', {});
   delete sessions[userId];
-  writeJson('sessions', sessions);
+  await writeJson('sessions', sessions);
 }
 
 module.exports = {

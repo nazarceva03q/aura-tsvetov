@@ -50,7 +50,7 @@ function buildCard(data, repeatInfo) {
 // MAX_OWNER_CHAT_ID ещё не настроен (тогда отправка просто не произойдёт).
 async function sendLeadNotification(data) {
   const phoneDigits = normalizePhone(data.phone);
-  const repeatInfo = data.phone ? store.checkAndRecordCustomer(phoneDigits) : { isRepeat: false, firstSeen: null };
+  const repeatInfo = data.phone ? await store.checkAndRecordCustomer(phoneDigits) : { isRepeat: false, firstSeen: null };
   const text = buildCard(data, repeatInfo);
 
   if (!config.ownerChatId) {

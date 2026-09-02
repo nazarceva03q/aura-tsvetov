@@ -29,7 +29,16 @@ const config = {
   webhookSecret: process.env.MAX_WEBHOOK_SECRET || '',
   siteBaseUrl: (process.env.SITE_BASE_URL || 'https://aura-flower.shop').replace(/\/$/, ''),
   port: parseInt(process.env.PORT, 10) || 3000,
-  publicServerUrl: (process.env.PUBLIC_SERVER_URL || '').replace(/\/$/, '')
+  publicServerUrl: (process.env.PUBLIC_SERVER_URL || '').replace(/\/$/, ''),
+  // Yandex Object Storage – постоянное хранилище сессий/клиентов/вопросов
+  // на Cloud Functions (там нет постоянного диска между вызовами).
+  // На VM-деплое эти переменные можно не задавать — store.js сам
+  // переключается на локальные файлы, если YC_S3_BUCKET пуст (см. store.js).
+  s3: {
+    bucket: process.env.YC_S3_BUCKET || '',
+    accessKey: process.env.YC_S3_ACCESS_KEY || '',
+    secretKey: process.env.YC_S3_SECRET_KEY || ''
+  }
 };
 
 if (!config.botToken) {
@@ -37,6 +46,9 @@ if (!config.botToken) {
 }
 if (!config.ownerChatId) {
   console.warn('[config] MAX_OWNER_CHAT_ID не задан — уведомления Олесе отправляться не будут, пока вы не впишете её user_id в bot/.env (см. README.md)');
+}
+if (!config.s3.bucket) {
+  console.warn('[config] YC_S3_BUCKET не задан — используется локальное файловое хранилище (bot/data/*.json). На Cloud Functions это НЕ будет работать между вызовами, см. README.md.');
 }
 
 module.exports = config;

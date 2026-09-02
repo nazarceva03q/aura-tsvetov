@@ -5,6 +5,10 @@
 //   cd bot && npm run setup-webhook
 //
 // Требует заполненных MAX_BOT_TOKEN и PUBLIC_SERVER_URL в bot/.env.
+// PUBLIC_SERVER_URL — ПОЛНЫЙ адрес вебхука (с путём, если он есть):
+//   VM (server.js, Express):        https://bot.aura-flower.shop/webhook/max
+//   Yandex Cloud Functions:          https://functions.yandexcloud.net/<id-функции>
+//     (у функции один URL на всё — путь не добавляется, см. bot/index.js)
 
 const config = require('../src/config');
 const maxApi = require('../src/maxApi');
@@ -15,7 +19,7 @@ async function main() {
     process.exit(1);
   }
   if (!config.publicServerUrl) {
-    console.error('Заполните PUBLIC_SERVER_URL в bot/.env (публичный HTTPS-адрес этого сервера).');
+    console.error('Заполните PUBLIC_SERVER_URL в bot/.env (полный HTTPS-адрес вебхука, см. комментарий выше).');
     process.exit(1);
   }
 
@@ -26,7 +30,7 @@ async function main() {
   }
   console.log('Токен рабочий, бот: @' + (me.body.username || me.body.first_name));
 
-  const webhookUrl = config.publicServerUrl + '/webhook/max';
+  const webhookUrl = config.publicServerUrl;
   const result = await maxApi.subscribe(webhookUrl, config.webhookSecret);
   if (!result.ok) {
     console.error('Не удалось зарегистрировать вебхук:', result.body);
