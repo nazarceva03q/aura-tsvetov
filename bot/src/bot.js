@@ -390,6 +390,20 @@ async function handleUpdate(update) {
     // их не блокируем; всё остальное для неё – заглушка ниже.
     const isOwner = Boolean(config.ownerChatId) && String(userId) === String(config.ownerChatId);
 
+    // Команда /start (Max показывает её подсказкой при вводе «/» — см.
+    // scripts/set-commands.js) – всегда возвращает в главное меню, из
+    // любого места сценария, не мешая при этом обычной переписке (это не
+    // отдельная всегда-видимая кнопка в чате – в Max таких нет, см. README).
+    if (update.update_type === 'message_created') {
+      const cmdText = (extractMessageText(update) || '').trim().toLowerCase();
+      if (cmdText === '/start' || cmdText === '/menu') {
+        await store.clearSession(userId);
+        if (isOwner) return sendOwnerGreeting(userId);
+        await sendMainMenu(userId);
+        return;
+      }
+    }
+
     if (update.update_type === 'bot_started') {
       const payload = extractStartPayload(update);
       if (payload) console.log('[bot] deep-link payload=' + payload);
