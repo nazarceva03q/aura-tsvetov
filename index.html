@@ -1722,7 +1722,9 @@
     // очищаем поле только если стёрли вообще всё, а «+7» само по себе
     // остаётся видимым и печатать дальше можно как с +7, так и сразу с 9/8.
     if (!digits) {
-      phoneInput.value = '';
+      // Даже один «+» без единой цифры показываем как есть – иначе первый
+      // же символ визуально «отклоняется», и кажется, что + вводить нельзя.
+      phoneInput.value = phoneInput.value.indexOf('+') === 0 ? '+' : '';
       return;
     }
     if (digits[0] === '8') digits = '7' + digits.slice(1);
@@ -2111,6 +2113,16 @@
       var kv = pair.split('=');
       if (kv[0]) params[decodeURIComponent(kv[0])] = decodeURIComponent(kv[1] || '');
     });
+    // #doc=privacy / #doc=consent – прямая ссылка на политику конфиденциальности
+    // или согласие на обработку персональных данных (используется, например,
+    // ботом Max перед тем как попросить телефон, см. bot/src/bot.js).
+    if (params.doc) {
+      var docId = params.doc === 'consent' ? 'consentDialog' : params.doc === 'privacy' ? 'privacyDialog' : null;
+      var docDialog = docId ? document.getElementById(docId) : null;
+      if (docDialog) docDialog.showModal();
+      return;
+    }
+
     if (!params.category) return;
 
     var targetCategory = null;
