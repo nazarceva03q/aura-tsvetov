@@ -132,6 +132,31 @@ async function sendMessage(target, text, rows, photoToken) {
   return callApi('POST', '/messages' + query, payload);
 }
 
+// Сообщение с разметкой markdown (format: 'markdown', подтверждено
+// документацией POST /messages). Используется только там, где нужна
+// именно кликабельная ссылка на профиль по user_id — max://user/<id> (тоже
+// подтверждено документацией, формат упоминаний в сообщениях). Отдельная
+// функция, а не флаг у sendMessage: текст обычных сообщений (в т.ч. вопрос
+// покупателя, введённый им самим) НЕ размечается как markdown специально,
+// чтобы случайные символы вроде * или _ в чужом тексте не ломали вид.
+async function sendMarkdownMessage(target, markdownText) {
+  if (!config.botToken) {
+    console.warn('[maxApi] нет MAX_BOT_TOKEN, сообщение не отправлено:', markdownText);
+    return { ok: false, status: 0, body: { error: 'no token' } };
+  }
+  const query = target.userId
+    ? '?user_id=' + encodeURIComponent(target.userId)
+    : '?chat_id=' + encodeURIComponent(target.chatId);
+  return callApi('POST', '/messages' + query, { text: markdownText, format: 'markdown' });
+}
+
+function userMention(label, userId) {
+  // Экранируем ] и ( внутри текста ссылки – маловероятно в имени, но на
+  // всякий случай, чтобы не сломать markdown-разметку.
+  const safeLabel = String(label).replace(/[[\]()]/g, '');
+  return '[' + safeLabel + '](max://user/' + userId + ')';
+}
+
 // – регистрация вебхука (используется скриптом bot/scripts/setup-webhook.js) –
 async function subscribe(webhookUrl, secret) {
   const body = {
@@ -148,6 +173,8 @@ async function getMe() {
 
 module.exports = {
   sendMessage,
+  sendMarkdownMessage,
+  userMention,
   callbackButton,
   requestContactButton,
   linkButton,

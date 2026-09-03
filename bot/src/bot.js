@@ -37,25 +37,21 @@ function extractAutoName(update) {
   return name || null;
 }
 
-// username – «уникальное публичное имя пользователя» (подтверждено
-// документацией User-объекта), из него собирается ссылка на профиль
-// https://max.ru/<username>. У части пользователей его нет (не задан) –
-// тогда ссылки не будет, только имя и id.
-function extractUsername(update) {
-  const u = update.user || (update.message && update.message.sender) || null;
-  return (u && u.username) || null;
-}
-
-// Единое представление «кто спрашивает» – используется и в первом
-// пересланном вопросе, и повторно, когда Олеся жмёт «Ответить». Телефон
-// сюда сознательно не добавляем: Max не отдаёт номер человека, который
-// просто написал боту (User-объект такого поля не содержит) – телефон
-// известен только если человек явно поделился контактом в форме заказа.
-function formatAsker(name, userId, username) {
-  let line = name || 'без имени в профиле';
-  line += username ? ' — https://max.ru/' + username : ' (профиль без юзернейма)';
-  line += '\nid: ' + userId;
-  return line;
+// Кликабельная ссылка на профиль спрашивающего – через max://user/<id>
+// (подтверждено документацией, формат упоминаний в markdown-сообщениях).
+// Работает для ЛЮБОГО пользователя по одному user_id, публичный username
+// для этого не нужен – раньше пробовали ссылку вида https://max.ru/<username>,
+// но у большинства людей username вообще не задан, и ссылки не было.
+// Отправляется ОТДЕЛЬНЫМ markdown-сообщением (см. sendAskerInfo), а не
+// вместе с текстом вопроса – текст вопроса пишет сам покупатель и может
+// случайно содержать символы вроде * или _, которые в markdown-режиме
+// исказили бы вид сообщения.
+async function sendAskerInfo(targetUserId, name, askerId) {
+  const label = name || ('Пользователь ' + askerId);
+  await maxApi.sendMarkdownMessage(
+    { userId: targetUserId },
+    maxApi.userMention(label, askerId) + '\nid: ' + askerId
+  );
 }
 
 function extractCallbackData(update) {
@@ -377,13 +373,13 @@ async function handleAwaitingQuestion(update, userId, session) {
   // ту же карточку вопроса, иначе заводим новую.
   const questionId = (session && session.activeQuestionId) || 'q' + Date.now();
   const askerName = extractAutoName(update);
-  const askerUsername = extractUsername(update);
-  await store.saveQuestion(questionId, userId, text.trim(), askerName, askerUsername);
+  await store.saveQuestion(questionId, userId, text.trim(), askerName);
 
   if (config.ownerChatId) {
+    await sendAskerInfo(config.ownerChatId, askerName, userId);
     await maxApi.sendMessage(
       { userId: config.ownerChatId },
-      formatAsker(askerName, userId, askerUsername) + '\n\n💬 Вопрос: ' + text.trim(),
+      '💬 Вопрос: ' + text.trim(),
       [[maxApi.callbackButton('Ответить', 'answer:' + questionId)]]
     );
   } else {
@@ -402,10 +398,8 @@ async function startAnswerFlow(ownerUserId, questionId) {
     return;
   }
   await store.setSession(ownerUserId, { step: 'awaiting_answer', answeringQuestionId: questionId });
-  await maxApi.sendMessage(
-    { userId: ownerUserId },
-    formatAsker(question.userName, question.userId, question.username) + '\n\nНапишите текст ответа:'
-  );
+  await sendAskerInfo(ownerUserId, question.userName, question.userId);
+  await maxApi.sendMessage({ userId: ownerUserId }, 'Напишите текст ответа:');
 }
 
 async function handleAwaitingAnswer(update, ownerUserId, session) {

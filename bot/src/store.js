@@ -57,14 +57,13 @@ async function checkAndRecordCustomer(phoneDigits) {
   return { isRepeat: false, firstSeen: null };
 }
 
-// – Вопросы: пара «вопрос → user_id автора» (+ имя и username, если знаем), без истории переписки –
-async function saveQuestion(questionId, userId, questionText, userName, username) {
+// – Вопросы: пара «вопрос → user_id автора» (+ имя, если знаем), без истории переписки –
+async function saveQuestion(questionId, userId, questionText, userName) {
   const questions = await readJson('questions', {});
   const existing = questions[questionId];
   questions[questionId] = {
     userId,
     userName: userName || (existing && existing.userName) || '',
-    username: username || (existing && existing.username) || '',
     question: questionText,
     answered: false,
     createdAt: (existing && existing.createdAt) || new Date().toISOString()
