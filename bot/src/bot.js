@@ -239,6 +239,7 @@ async function finishOrder(userId, name, session) {
     source: 'Бот Max → ' + categoryDisplayName(order.category),
     name,
     phone: order.phone,
+    productId: order.productId,
     productName: order.productName,
     siteRef: order.siteRef
   });

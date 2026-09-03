@@ -1285,7 +1285,7 @@
         <!-- TODO: вставить ссылку на чат после создания бота в Max -->
         <a class="btn btn-primary" href="#">Написать в Max</a>
         <a class="btn btn-ghost" href="tel:+79033676077">Позвонить</a>
-        <button type="button" class="btn btn-ghost" data-open-lead data-category="Первый экран">Оставить заявку</button>
+        <button type="button" class="btn btn-ghost" data-open-lead data-category="Первый экран" data-source="Сайт → Общая заявка (Первый экран)">Оставить заявку</button>
       </div>
     </div>
 
@@ -1415,7 +1415,7 @@
       </span>
       <p class="promo-item-text">Предзаказ к праздникам по фиксированной цене: 8 марта, 1 мая, 1 сентября, 14 февраля</p>
     </div>
-    <button type="button" class="btn btn-ghost btn-sm promo-preorder-btn" data-open-lead data-source="Предзаказ на праздники">Оставить заявку на предзаказ</button>
+    <button type="button" class="btn btn-ghost btn-sm promo-preorder-btn" data-open-lead data-source="Сайт → Предзаказ на праздники">Оставить заявку на предзаказ</button>
   </div>
 </section>
 
@@ -2063,7 +2063,7 @@
 
     var titleText = category;
     if (category === 'Цветы поштучно') {
-      titleText += ' — Соберём букет по вашим пожеланиям из любого количества цветов';
+      titleText += ' – соберём букет по вашим пожеланиям из любого количества цветов';
     }
     catalogPanel.innerHTML =
       '<h3 class="catalog-panel-title">' + titleText + '</h3>' +
@@ -2141,6 +2141,9 @@
       product: btn.getAttribute('data-product') || '',
       productId: productId,
       siteRef: ref,
+      // Явно указываем, с какой именно кнопки пришла заявка – это видно в
+      // поле «Источник» карточки уведомления Олесе.
+      source: 'Сайт → ' + (similarBtn ? 'Хочу похожий' : 'Хочу такой') + ' (' + category + ')',
       // «Хочу похожий» привязывает заявку к конкретному фото товара (photoRef) –
       // в карточке уведомления Олесе появится отдельная строка «📷 Понравилось фото».
       // «Хочу такой» этого не делает – это обычный заказ, без строки про фото.

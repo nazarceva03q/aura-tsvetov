@@ -68,6 +68,7 @@ app.post('/webhook/lead', async (req, res) => {
     source: data.source || (data.category ? 'Сайт → форма → ' + data.category : 'Сайт → форма'),
     name: data.name || '',
     phone: data.phone,
+    productId: data.productId || '',
     productName: data.product || '',
     siteRef: data.siteRef || '',
     photoRef: data.photoRef || '',
