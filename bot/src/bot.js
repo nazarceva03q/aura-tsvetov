@@ -93,6 +93,19 @@ function categoryDisplayName(slug) {
   return c ? c.name : slug;
 }
 
+// Max не умеет в закреплённую кнопку-меню сбоку от переписки (в отличие от
+// Telegram) – ближайший рабочий заменитель: кнопка «Меню» почти на каждом
+// сообщении бота, чтобы она всегда была под рукой прямо в последнем
+// сообщении, без необходимости листать назад или набирать /start. Не
+// используется в служебном чате владелицы (там своя логика, см. isOwner) –
+// там кнопка «В меню» открывала бы витрину, которую там как раз не
+// показываем.
+function withMenu(rows) {
+  const r = rows ? rows.slice() : [];
+  r.push([maxApi.callbackButton('🏠 Меню', 'menu:root')]);
+  return r;
+}
+
 // ---------- главное меню ----------
 
 const WELCOME_TEXT = 'Добрый день! Что вас интересует?';
@@ -151,12 +164,10 @@ async function sendCategory(userId, slug) {
     await maxApi.sendMessage(
       { userId },
       p.name + '\n' + p.price,
-      [[maxApi.callbackButton('Хочу такой', 'order:' + p.id)]],
+      withMenu([[maxApi.callbackButton('Хочу такой', 'order:' + p.id)]]),
       p.photoToken
     );
   }
-
-  await maxApi.sendMessage({ userId }, ' ', [[maxApi.callbackButton('⬅️ В меню', 'menu:root')]]);
 }
 
 // ---------- сценарий заказа (после «Хочу такой») ----------
@@ -179,7 +190,7 @@ async function startOrderFlow(userId, productId) {
     userId ? { userId } : {},
     'Отлично! Оставьте, пожалуйста, имя и телефон, и мы уточним детали.\n🎁 Скидка 10% на первый заказ\n\n' +
       'Нажмите кнопку, чтобы поделиться номером одним тапом, либо просто напишите его в чат.',
-    [[maxApi.requestContactButton('📱 Поделиться контактом')]]
+    withMenu([[maxApi.requestContactButton('📱 Поделиться контактом')]])
   );
 }
 
@@ -197,7 +208,8 @@ async function handleOrderAwaitingContact(update, userId, session) {
   } else {
     await maxApi.sendMessage(
       { userId },
-      'Не получилось распознать номер. Отправьте его ещё раз, например: +7 999 123-45-67'
+      'Не получилось распознать номер. Отправьте его ещё раз, например: +7 999 123-45-67',
+      withMenu()
     );
     return;
   }
@@ -212,12 +224,12 @@ async function handleOrderAwaitingContact(update, userId, session) {
     await maxApi.sendMessage(
       { userId },
       'Ваше имя: ' + autoName + '. Всё верно?\n\nЕсли нет — просто напишите, как к вам обращаться.',
-      [[maxApi.callbackButton('✅ Всё верно', 'name_confirm')]]
+      withMenu([[maxApi.callbackButton('✅ Всё верно', 'name_confirm')]])
     );
   } else {
     session.step = 'order_awaiting_name';
     await store.setSession(userId, session);
-    await maxApi.sendMessage({ userId }, 'Как вас зовут?');
+    await maxApi.sendMessage({ userId }, 'Как вас зовут?', withMenu());
   }
 }
 
@@ -232,7 +244,8 @@ async function finishOrder(userId, name, session) {
   });
   await maxApi.sendMessage(
     { userId },
-    'Спасибо, ' + name + '! Свяжемся с вами в ближайшее время'
+    'Спасибо, ' + name + '! Свяжемся с вами в ближайшее время',
+    withMenu()
   );
   await store.clearSession(userId);
 }
@@ -249,7 +262,7 @@ async function handleOrderAwaitingName(update, userId, session) {
     await finishOrder(userId, text.trim(), session);
     return;
   }
-  await maxApi.sendMessage({ userId }, 'Напишите, пожалуйста, ваше имя одним сообщением.');
+  await maxApi.sendMessage({ userId }, 'Напишите, пожалуйста, ваше имя одним сообщением.', withMenu());
 }
 
 // ---------- «Заказать звонок» ----------
@@ -259,7 +272,7 @@ async function startCallFlow(userId) {
   await maxApi.sendMessage(
     { userId },
     'Оставьте номер, перезвоним в течение часа. 🎁 Скидка 10% на первый заказ',
-    [[maxApi.requestContactButton('📱 Поделиться контактом')]]
+    withMenu([[maxApi.requestContactButton('📱 Поделиться контактом')]])
   );
 }
 
@@ -271,7 +284,8 @@ async function handleCallAwaitingContact(update, userId) {
   if (!phone || !isValidPhone(phone)) {
     await maxApi.sendMessage(
       { userId },
-      'Не получилось распознать номер. Отправьте его ещё раз, например: +7 999 123-45-67'
+      'Не получилось распознать номер. Отправьте его ещё раз, например: +7 999 123-45-67',
+      withMenu()
     );
     return;
   }
@@ -281,7 +295,7 @@ async function handleCallAwaitingContact(update, userId) {
     phone,
     interestedIn: 'просит перезвонить'
   });
-  await maxApi.sendMessage({ userId }, 'Спасибо! Скоро перезвоним');
+  await maxApi.sendMessage({ userId }, 'Спасибо! Скоро перезвоним', withMenu());
   await store.clearSession(userId);
 }
 
@@ -289,20 +303,20 @@ async function handleCallAwaitingContact(update, userId) {
 
 async function startQuestionFlow(userId) {
   await store.setSession(userId, { step: 'awaiting_question' });
-  await maxApi.sendMessage({ userId }, 'Напишите ваш вопрос, ответим как можно скорее');
+  await maxApi.sendMessage({ userId }, 'Напишите ваш вопрос, ответим как можно скорее', withMenu());
 }
 
 // Покупатель нажал «Ответить» под ответом Олеси – продолжаем тот же вопрос
 // (activeQuestionId), а не заводим новый с нуля.
 async function startReplyFlow(userId, questionId) {
   await store.setSession(userId, { step: 'awaiting_question', activeQuestionId: questionId });
-  await maxApi.sendMessage({ userId }, 'Напишите сообщение:');
+  await maxApi.sendMessage({ userId }, 'Напишите сообщение:', withMenu());
 }
 
 async function handleAwaitingQuestion(update, userId, session) {
   const text = extractMessageText(update);
   if (!text || !text.trim()) {
-    await maxApi.sendMessage({ userId }, 'Напишите вопрос одним сообщением, пожалуйста.');
+    await maxApi.sendMessage({ userId }, 'Напишите вопрос одним сообщением, пожалуйста.', withMenu());
     return;
   }
 
@@ -321,7 +335,7 @@ async function handleAwaitingQuestion(update, userId, session) {
     console.warn('[bot] MAX_OWNER_CHAT_ID не настроен, вопрос не переслан Олесе:', text.trim());
   }
 
-  await maxApi.sendMessage({ userId }, 'Спасибо, передали ваш вопрос!');
+  await maxApi.sendMessage({ userId }, 'Спасибо, передали ваш вопрос!', withMenu());
   await store.clearSession(userId);
 }
 
@@ -357,7 +371,7 @@ async function handleAwaitingAnswer(update, ownerUserId, session) {
   await maxApi.sendMessage(
     { userId: question.userId },
     '💬 Ответ на ваш вопрос:\n\n' + text.trim(),
-    [[maxApi.callbackButton('Ответить', 'reply:' + session.answeringQuestionId)]]
+    withMenu([[maxApi.callbackButton('Ответить', 'reply:' + session.answeringQuestionId)]])
   );
   await store.markQuestionAnswered(session.answeringQuestionId);
   await maxApi.sendMessage({ userId: ownerUserId }, 'Ответ отправлен!');
