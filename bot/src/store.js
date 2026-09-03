@@ -57,13 +57,14 @@ async function checkAndRecordCustomer(phoneDigits) {
   return { isRepeat: false, firstSeen: null };
 }
 
-// – Вопросы: пара «вопрос → user_id автора» (+ имя, если знаем), без истории переписки –
-async function saveQuestion(questionId, userId, questionText, userName) {
+// – Вопросы: пара «вопрос → user_id автора» (+ имя и username, если знаем), без истории переписки –
+async function saveQuestion(questionId, userId, questionText, userName, username) {
   const questions = await readJson('questions', {});
   const existing = questions[questionId];
   questions[questionId] = {
     userId,
     userName: userName || (existing && existing.userName) || '',
+    username: username || (existing && existing.username) || '',
     question: questionText,
     answered: false,
     createdAt: (existing && existing.createdAt) || new Date().toISOString()
@@ -102,6 +103,32 @@ async function clearSession(userId) {
   await writeJson('sessions', sessions);
 }
 
+// – Защита от повторной обработки одного и того же апдейта –
+// Наблюдался реальный случай: Max присылал один и тот же message_callback
+// несколько раз подряд (видимо, повторная доставка, если функция не
+// ответила достаточно быстро), и бот несколько раз пересылал Олесе одно и
+// то же. У Update-объекта нет отдельного update_id (подтверждено
+// документацией), поэтому дедуп – по составному ключу (тип + user_id +
+// содержимое + исходный timestamp события). Ключи протухают через 15
+// минут, чтобы файл не рос бесконечно и чтобы одинаковое повторное
+// действие человека (не ретрай, а реальное повторное нажатие спустя время)
+// не блокировалось навсегда.
+const DEDUP_WINDOW_MS = 15 * 60 * 1000;
+
+async function wasRecentlyProcessed(key) {
+  const seen = await readJson('recent_updates', {});
+  const now = Date.now();
+  for (const k of Object.keys(seen)) {
+    if (now - seen[k] > DEDUP_WINDOW_MS) delete seen[k];
+  }
+  if (seen[key] !== undefined) {
+    return true;
+  }
+  seen[key] = now;
+  await writeJson('recent_updates', seen);
+  return false;
+}
+
 module.exports = {
   checkAndRecordCustomer,
   saveQuestion,
@@ -109,5 +136,6 @@ module.exports = {
   markQuestionAnswered,
   getSession,
   setSession,
-  clearSession
+  clearSession,
+  wasRecentlyProcessed
 };

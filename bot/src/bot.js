@@ -37,6 +37,27 @@ function extractAutoName(update) {
   return name || null;
 }
 
+// username – «уникальное публичное имя пользователя» (подтверждено
+// документацией User-объекта), из него собирается ссылка на профиль
+// https://max.ru/<username>. У части пользователей его нет (не задан) –
+// тогда ссылки не будет, только имя и id.
+function extractUsername(update) {
+  const u = update.user || (update.message && update.message.sender) || null;
+  return (u && u.username) || null;
+}
+
+// Единое представление «кто спрашивает» – используется и в первом
+// пересланном вопросе, и повторно, когда Олеся жмёт «Ответить». Телефон
+// сюда сознательно не добавляем: Max не отдаёт номер человека, который
+// просто написал боту (User-объект такого поля не содержит) – телефон
+// известен только если человек явно поделился контактом в форме заказа.
+function formatAsker(name, userId, username) {
+  let line = name || 'без имени в профиле';
+  line += username ? ' — https://max.ru/' + username : ' (профиль без юзернейма)';
+  line += '\nid: ' + userId;
+  return line;
+}
+
 function extractCallbackData(update) {
   return (
     update.callback_data ||
@@ -172,12 +193,19 @@ async function sendCategory(userId, slug) {
 
 // ---------- сценарий заказа (после «Хочу такой») ----------
 
+// Ссылка на «Согласие на обработку персональных данных» на сайте – тот же
+// текст, что и в чекбоксе формы заказа на сайте (152-ФЗ). #doc=consent
+// открывает этот документ напрямую (см. index.html, openFromSiteRef).
+function consentUrl() {
+  return config.siteBaseUrl + '/#doc=consent';
+}
+
 async function startOrderFlow(userId, productId) {
   const product = catalog.getProductById(productId);
   if (!product) return sendMainMenu(userId);
 
   await store.setSession(userId, {
-    step: 'order_awaiting_contact',
+    step: 'order_awaiting_consent',
     order: {
       productId: product.id,
       productName: product.name,
@@ -185,6 +213,20 @@ async function startOrderFlow(userId, productId) {
       siteRef: catalog.siteRefFor(product)
     }
   });
+
+  await maxApi.sendMessage(
+    userId ? { userId } : {},
+    'Для оформления заказа нужно ваше согласие на обработку персональных данных (имя, телефон) в соответствии с 152-ФЗ.\n' +
+      'Ознакомиться: ' + consentUrl(),
+    withMenu([[maxApi.callbackButton('✅ Согласен(на)', 'consent:order')]])
+  );
+}
+
+async function proceedToOrderContact(userId) {
+  const session = await store.getSession(userId);
+  if (session.step !== 'order_awaiting_consent' || !session.order) return sendMainMenu(userId);
+  session.step = 'order_awaiting_contact';
+  await store.setSession(userId, session);
 
   await maxApi.sendMessage(
     userId ? { userId } : {},
@@ -269,6 +311,16 @@ async function handleOrderAwaitingName(update, userId, session) {
 // ---------- «Заказать звонок» ----------
 
 async function startCallFlow(userId) {
+  await store.setSession(userId, { step: 'call_awaiting_consent' });
+  await maxApi.sendMessage(
+    { userId },
+    'Для звонка нужно ваше согласие на обработку персональных данных (телефон) в соответствии с 152-ФЗ.\n' +
+      'Ознакомиться: ' + consentUrl(),
+    withMenu([[maxApi.callbackButton('✅ Согласен(на)', 'consent:call')]])
+  );
+}
+
+async function proceedToCallContact(userId) {
   await store.setSession(userId, { step: 'call_awaiting_contact' });
   await maxApi.sendMessage(
     { userId },
@@ -324,12 +376,14 @@ async function handleAwaitingQuestion(update, userId, session) {
   // Если это продолжение диалога (кнопка «Ответить» у покупателя) – пишем в
   // ту же карточку вопроса, иначе заводим новую.
   const questionId = (session && session.activeQuestionId) || 'q' + Date.now();
-  await store.saveQuestion(questionId, userId, text.trim(), extractAutoName(update));
+  const askerName = extractAutoName(update);
+  const askerUsername = extractUsername(update);
+  await store.saveQuestion(questionId, userId, text.trim(), askerName, askerUsername);
 
   if (config.ownerChatId) {
     await maxApi.sendMessage(
       { userId: config.ownerChatId },
-      '💬 Вопрос: ' + text.trim(),
+      formatAsker(askerName, userId, askerUsername) + '\n\n💬 Вопрос: ' + text.trim(),
       [[maxApi.callbackButton('Ответить', 'answer:' + questionId)]]
     );
   } else {
@@ -348,10 +402,10 @@ async function startAnswerFlow(ownerUserId, questionId) {
     return;
   }
   await store.setSession(ownerUserId, { step: 'awaiting_answer', answeringQuestionId: questionId });
-  // Показываем, кто спрашивает – по имени и user_id (телефон в этой ветке не
-  // собирается, только в форме заказа).
-  const who = question.userName ? question.userName + ' (id ' + question.userId + ')' : 'id ' + question.userId;
-  await maxApi.sendMessage({ userId: ownerUserId }, 'Спрашивает: ' + who + '\nНапишите текст ответа:');
+  await maxApi.sendMessage(
+    { userId: ownerUserId },
+    formatAsker(question.userName, question.userId, question.username) + '\n\nНапишите текст ответа:'
+  );
 }
 
 async function handleAwaitingAnswer(update, ownerUserId, session) {
@@ -386,6 +440,19 @@ async function handleUpdate(update) {
     const userId = extractUserId(update);
     if (!userId) {
       console.warn('[bot] апдейт без определяемого user_id, пропущено:', JSON.stringify(update));
+      return;
+    }
+
+    // Защита от повторной доставки одного и того же события Max (см.
+    // store.wasRecentlyProcessed) – без этого при медленном ответе функции
+    // Max мог прислать апдейт повторно, и Олеся получала один и тот же
+    // вопрос/ответ по нескольку раз подряд.
+    const dedupKey =
+      update.update_type + ':' + userId + ':' +
+      (extractCallbackData(update) || extractMessageText(update) || '') + ':' +
+      (update.timestamp || '');
+    if (await store.wasRecentlyProcessed(dedupKey)) {
+      console.log('[bot] дубликат апдейта, пропущено:', dedupKey);
       return;
     }
 
@@ -450,6 +517,8 @@ async function handleUpdate(update) {
       if (data === 'menu:question') return startQuestionFlow(userId);
       if (data.indexOf('category:') === 0) return sendCategory(userId, data.slice('category:'.length));
       if (data.indexOf('order:') === 0) return startOrderFlow(userId, data.slice('order:'.length));
+      if (data === 'consent:order') return proceedToOrderContact(userId);
+      if (data === 'consent:call') return proceedToCallContact(userId);
 
       // name_confirm обрабатывается ниже, внутри шага order_awaiting_name –
       // callback тоже проходит через сессионный switch, поэтому падаем туда же.
@@ -465,6 +534,24 @@ async function handleUpdate(update) {
     }
 
     switch (session.step) {
+      case 'order_awaiting_consent':
+        if (update.update_type === 'message_created') {
+          return maxApi.sendMessage(
+            { userId },
+            'Чтобы продолжить оформление, нажмите «✅ Согласен(на)» выше.',
+            withMenu()
+          );
+        }
+        return;
+      case 'call_awaiting_consent':
+        if (update.update_type === 'message_created') {
+          return maxApi.sendMessage(
+            { userId },
+            'Чтобы продолжить, нажмите «✅ Согласен(на)» выше.',
+            withMenu()
+          );
+        }
+        return;
       case 'order_awaiting_contact':
         return handleOrderAwaitingContact(update, userId, session);
       case 'order_awaiting_name':
