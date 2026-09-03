@@ -105,11 +105,18 @@ function linkButton(text, url) {
 
 // rows – массив массивов кнопок, напр. [[btn1, btn2], [btn3]]
 function keyboardAttachment(rows) {
-  return [{ type: 'inline_keyboard', payload: { buttons: rows } }];
+  return { type: 'inline_keyboard', payload: { buttons: rows } };
 }
 
-// – отправка сообщения. target = { userId } или { chatId } –
-async function sendMessage(target, text, rows) {
+// token – из bot/src/photoTokens.json (см. scripts/sync-photos.js)
+function imageAttachment(token) {
+  return { type: 'image', payload: { token } };
+}
+
+// – отправка сообщения. target = { userId } или { chatId }.
+// photoToken (необязательно) – фото товара, показывается вместе с текстом
+// и кнопками в одном сообщении.
+async function sendMessage(target, text, rows, photoToken) {
   if (!config.botToken) {
     console.warn('[maxApi] нет MAX_BOT_TOKEN, сообщение не отправлено:', text);
     return { ok: false, status: 0, body: { error: 'no token' } };
@@ -118,7 +125,10 @@ async function sendMessage(target, text, rows) {
     ? '?user_id=' + encodeURIComponent(target.userId)
     : '?chat_id=' + encodeURIComponent(target.chatId);
   const payload = { text };
-  if (rows && rows.length) payload.attachments = keyboardAttachment(rows);
+  const attachments = [];
+  if (photoToken) attachments.push(imageAttachment(photoToken));
+  if (rows && rows.length) attachments.push(keyboardAttachment(rows));
+  if (attachments.length) payload.attachments = attachments;
   return callApi('POST', '/messages' + query, payload);
 }
 

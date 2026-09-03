@@ -50,14 +50,31 @@ function extractMessageText(update) {
   return (update.message && update.message.body && update.message.body.text) || update.text || null;
 }
 
+// Кнопка request_contact присылает контакт как vCard-текст внутри
+// payload.vcf_info (подтверждено документацией), например:
+//   "BEGIN:VCARD\r\nVERSION:3.0\r\nTEL;TYPE=cell:79990000000\r\nFN:Иван Иванов\r\nEND:VCARD\r\n"
+// Раньше здесь искали несуществующие payload.phone_number/payload.phone –
+// поэтому кнопка «Поделиться контактом» не срабатывала.
+function parseVcfPhone(vcf) {
+  if (!vcf) return null;
+  const m = vcf.match(/TEL[^:]*:([+\d][\d\s()-]*)/i);
+  return m ? m[1].replace(/\s+/g, '') : null;
+}
+function parseVcfName(vcf) {
+  if (!vcf) return null;
+  const m = vcf.match(/FN:([^\r\n]+)/i);
+  return m ? m[1].trim() : null;
+}
+
 function extractContact(update) {
   const attachments = (update.message && update.message.body && update.message.body.attachments) || [];
   const contactAtt = attachments.find((a) => a && a.type === 'contact');
   if (!contactAtt) return null;
   const payload = contactAtt.payload || contactAtt;
+  const vcf = payload.vcf_info || payload.vcf || null;
   return {
-    phone: payload.phone_number || payload.phone || payload.vcf_phone || null,
-    name: payload.name || payload.first_name || null
+    phone: parseVcfPhone(vcf) || payload.phone_number || payload.phone || null,
+    name: parseVcfName(vcf) || payload.name || null
   };
 }
 
@@ -82,21 +99,37 @@ const WELCOME_TEXT = 'Добрый день! Что вас интересует?
 
 function mainMenuRows() {
   const c = catalog.CATEGORIES;
+  // По одной кнопке в строке – так они шире и название всегда видно целиком
+  // (на узком экране 2-3 кнопки в ряд обрезали текст).
   return [
-    [
-      maxApi.callbackButton(c[0].emoji + ' ' + c[0].name + ' от ' + c[0].fromPrice, 'category:' + c[0].slug),
-      maxApi.callbackButton(c[1].emoji + ' ' + c[1].name + ' от ' + c[1].fromPrice, 'category:' + c[1].slug)
-    ],
-    [
-      maxApi.callbackButton(c[2].emoji + ' ' + c[2].name + ' от ' + c[2].fromPrice, 'category:' + c[2].slug),
-      maxApi.callbackButton('📞 Заказать звонок', 'menu:call'),
-      maxApi.callbackButton('💬 Задать вопрос', 'menu:question')
-    ]
+    [maxApi.callbackButton(c[0].emoji + ' ' + c[0].name, 'category:' + c[0].slug)],
+    [maxApi.callbackButton(c[1].emoji + ' ' + c[1].name, 'category:' + c[1].slug)],
+    [maxApi.callbackButton(c[2].emoji + ' ' + c[2].name, 'category:' + c[2].slug)],
+    [maxApi.callbackButton('📞 Заказать звонок', 'menu:call')],
+    [maxApi.callbackButton('💬 Задать вопрос', 'menu:question')]
   ];
 }
 
 async function sendMainMenu(userId) {
   await maxApi.sendMessage({ userId }, WELCOME_TEXT, mainMenuRows());
+}
+
+// ---------- служебный чат владелицы (MAX_OWNER_CHAT_ID) ----------
+// Сюда приходят уведомления о заявках и пересланные вопросы – витрину
+// магазина в этом чате не показываем, даже если она случайно что-то нажмёт.
+
+async function sendOwnerGreeting(userId) {
+  await maxApi.sendMessage(
+    { userId },
+    'Здравствуйте! Это служебный чат бота «Аура цветов» — сюда будут приходить уведомления о новых заявках и вопросы покупателей. Витрина магазина здесь не открывается.'
+  );
+}
+
+async function sendOwnerNotice(userId) {
+  await maxApi.sendMessage(
+    { userId },
+    'Это служебный чат уведомлений — витрина магазина здесь не открывается. Ответить покупателю можно кнопкой «Ответить» под его вопросом.'
+  );
 }
 
 // ---------- категория → карточки товаров ----------
@@ -106,17 +139,20 @@ async function sendCategory(userId, slug) {
   if (!category) return sendMainMenu(userId);
 
   const products = catalog.getProductsByCategory(slug);
-  await maxApi.sendMessage({ userId }, category.emoji + ' ' + category.name + ' — выберите, что понравится:');
+  var intro = category.emoji + ' ' + category.name + ' — выберите, что понравится:';
+  if (category.note) intro = category.emoji + ' ' + category.name + ' — ' + category.note + ':';
+  await maxApi.sendMessage({ userId }, intro);
 
-  // Фото у товаров пока не отправляем: на сайте фото хранятся как data-URI
-  // прямо в HTML, отдельных публичных ссылок на картинки нет. Как только
-  // появится хостинг изображений (например, Yandex Object Storage), сюда
-  // легко добавить attachments типа "image" — структура карточек уже готова.
+  // Фото загружены заранее в Max и переиспользуются по токену – см.
+  // scripts/sync-photos.js и src/photoTokens.json. Если для товара пока нет
+  // токена (фото не синхронизировали), карточка уходит без фото, просто
+  // текстом – ничего не падает.
   for (const p of products) {
     await maxApi.sendMessage(
       { userId },
       p.name + '\n' + p.price,
-      [[maxApi.callbackButton('Хочу такой', 'order:' + p.id)]]
+      [[maxApi.callbackButton('Хочу такой', 'order:' + p.id)]],
+      p.photoToken
     );
   }
 
@@ -141,7 +177,7 @@ async function startOrderFlow(userId, productId) {
 
   await maxApi.sendMessage(
     userId ? { userId } : {},
-    'Отлично! Оставьте, пожалуйста, имя и телефон, и мы уточним детали. 🎁 Скидка 10% на первый заказ\n\n' +
+    'Отлично! Оставьте, пожалуйста, имя и телефон, и мы уточним детали.\n🎁 Скидка 10% на первый заказ\n\n' +
       'Нажмите кнопку, чтобы поделиться номером одним тапом, либо просто напишите его в чат.',
     [[maxApi.requestContactButton('📱 Поделиться контактом')]]
   );
@@ -196,7 +232,7 @@ async function finishOrder(userId, name, session) {
   });
   await maxApi.sendMessage(
     { userId },
-    'Спасибо, ' + name + '! Свяжемся с вами в ближайшее время, а перед отправкой пришлём фото букета'
+    'Спасибо, ' + name + '! Свяжемся с вами в ближайшее время'
   );
   await store.clearSession(userId);
 }
@@ -256,15 +292,24 @@ async function startQuestionFlow(userId) {
   await maxApi.sendMessage({ userId }, 'Напишите ваш вопрос, ответим как можно скорее');
 }
 
-async function handleAwaitingQuestion(update, userId) {
+// Покупатель нажал «Ответить» под ответом Олеси – продолжаем тот же вопрос
+// (activeQuestionId), а не заводим новый с нуля.
+async function startReplyFlow(userId, questionId) {
+  await store.setSession(userId, { step: 'awaiting_question', activeQuestionId: questionId });
+  await maxApi.sendMessage({ userId }, 'Напишите сообщение:');
+}
+
+async function handleAwaitingQuestion(update, userId, session) {
   const text = extractMessageText(update);
   if (!text || !text.trim()) {
     await maxApi.sendMessage({ userId }, 'Напишите вопрос одним сообщением, пожалуйста.');
     return;
   }
 
-  const questionId = 'q' + Date.now();
-  await store.saveQuestion(questionId, userId, text.trim());
+  // Если это продолжение диалога (кнопка «Ответить» у покупателя) – пишем в
+  // ту же карточку вопроса, иначе заводим новую.
+  const questionId = (session && session.activeQuestionId) || 'q' + Date.now();
+  await store.saveQuestion(questionId, userId, text.trim(), extractAutoName(update));
 
   if (config.ownerChatId) {
     await maxApi.sendMessage(
@@ -288,7 +333,10 @@ async function startAnswerFlow(ownerUserId, questionId) {
     return;
   }
   await store.setSession(ownerUserId, { step: 'awaiting_answer', answeringQuestionId: questionId });
-  await maxApi.sendMessage({ userId: ownerUserId }, 'Напишите текст ответа:');
+  // Показываем, кто спрашивает – по имени и user_id (телефон в этой ветке не
+  // собирается, только в форме заказа).
+  const who = question.userName ? question.userName + ' (id ' + question.userId + ')' : 'id ' + question.userId;
+  await maxApi.sendMessage({ userId: ownerUserId }, 'Спрашивает: ' + who + '\nНапишите текст ответа:');
 }
 
 async function handleAwaitingAnswer(update, ownerUserId, session) {
@@ -304,7 +352,13 @@ async function handleAwaitingAnswer(update, ownerUserId, session) {
     return;
   }
 
-  await maxApi.sendMessage({ userId: question.userId }, '💬 Ответ на ваш вопрос:\n\n' + text.trim());
+  // «Ответить» под ответом – чтобы покупатель мог продолжить диалог или
+  // просто написать «Спасибо», не начиная вопрос с нуля.
+  await maxApi.sendMessage(
+    { userId: question.userId },
+    '💬 Ответ на ваш вопрос:\n\n' + text.trim(),
+    [[maxApi.callbackButton('Ответить', 'reply:' + session.answeringQuestionId)]]
+  );
   await store.markQuestionAnswered(session.answeringQuestionId);
   await maxApi.sendMessage({ userId: ownerUserId }, 'Ответ отправлен!');
   await store.clearSession(ownerUserId);
@@ -320,12 +374,26 @@ async function handleUpdate(update) {
       return;
     }
 
+    // Печатаем user_id для КАЖДОГО апдейта (не только bot_started) – это
+    // единственный способ узнать chat_id Олеси для MAX_OWNER_CHAT_ID (бот не
+    // может писать первым). Если её первое «Начать» пришлось на момент, когда
+    // функция ещё падала на импорте, bot_started мог не долететь до этой
+    // точки кода вообще – а любое следующее нажатие кнопки/сообщение всё
+    // равно попадёт в этот лог.
+    console.log('[bot] update_type=' + update.update_type + ', user_id=' + userId);
+
+    // Олеся (MAX_OWNER_CHAT_ID) пишет боту в тот же чат, куда приходят
+    // уведомления о заявках – без этой проверки бот показывал бы ей витрину
+    // магазина точно так же, как обычному покупателю, стоит ей случайно
+    // нажать кнопку или что-то написать. «Ответить» под вопросом покупателя
+    // (answer:<id>) и сам ответ (шаг awaiting_answer) – её законные действия,
+    // их не блокируем; всё остальное для неё – заглушка ниже.
+    const isOwner = Boolean(config.ownerChatId) && String(userId) === String(config.ownerChatId);
+
     if (update.update_type === 'bot_started') {
       const payload = extractStartPayload(update);
-      // Печатаем user_id заметно – это единственный способ узнать chat_id
-      // Олеси для MAX_OWNER_CHAT_ID (бот не может писать первым, поэтому
-      // узнать id можно только после того, как человек сам нажал «Начать»).
-      console.log('[bot] bot_started: user_id=' + userId + (payload ? ', deep-link payload=' + payload : ''));
+      if (payload) console.log('[bot] deep-link payload=' + payload);
+      if (isOwner) return sendOwnerGreeting(userId);
       await sendMainMenu(userId);
       return;
     }
@@ -337,6 +405,13 @@ async function handleUpdate(update) {
         return;
       }
 
+      // 'answer:' разрешён владелице всегда – это её кнопка под вопросом.
+      if (data.indexOf('answer:') === 0) return startAnswerFlow(userId, data.slice('answer:'.length));
+      // 'reply:' – покупатель продолжает диалог под ответом Олеси.
+      if (data.indexOf('reply:') === 0) return startReplyFlow(userId, data.slice('reply:'.length));
+
+      if (isOwner) return sendOwnerNotice(userId);
+
       // Префиксы разных типов кнопок НЕ должны пересекаться (раньше 'menu:call'
       // и 'menu:question' перехватывались общей проверкой data.indexOf('menu:'),
       // предназначенной для категорий, и уходили в sendCategory с несуществующим
@@ -346,7 +421,6 @@ async function handleUpdate(update) {
       if (data === 'menu:question') return startQuestionFlow(userId);
       if (data.indexOf('category:') === 0) return sendCategory(userId, data.slice('category:'.length));
       if (data.indexOf('order:') === 0) return startOrderFlow(userId, data.slice('order:'.length));
-      if (data.indexOf('answer:') === 0) return startAnswerFlow(userId, data.slice('answer:'.length));
 
       // name_confirm обрабатывается ниже, внутри шага order_awaiting_name –
       // callback тоже проходит через сессионный switch, поэтому падаем туда же.
@@ -356,6 +430,11 @@ async function handleUpdate(update) {
     //   name_confirm) разбирается по текущему шагу сессии пользователя –
     const session = await store.getSession(userId);
 
+    if (isOwner && session.step !== 'awaiting_answer') {
+      if (update.update_type === 'message_created') return sendOwnerNotice(userId);
+      return;
+    }
+
     switch (session.step) {
       case 'order_awaiting_contact':
         return handleOrderAwaitingContact(update, userId, session);
@@ -364,12 +443,13 @@ async function handleUpdate(update) {
       case 'call_awaiting_contact':
         return handleCallAwaitingContact(update, userId);
       case 'awaiting_question':
-        return handleAwaitingQuestion(update, userId);
+        return handleAwaitingQuestion(update, userId, session);
       case 'awaiting_answer':
         return handleAwaitingAnswer(update, userId, session);
       default:
         // Свободный текст без активного сценария – не оставляем пользователя
-        // в тупике, показываем меню ещё раз.
+        // в тупике, показываем меню ещё раз. (isOwner сюда не попадает –
+        // отсечено проверкой выше.)
         if (update.update_type === 'message_created') {
           await maxApi.sendMessage({ userId }, 'Не совсем поняла 🙂 Вот, что я умею:');
           await sendMainMenu(userId);

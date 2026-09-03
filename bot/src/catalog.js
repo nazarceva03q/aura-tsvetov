@@ -8,9 +8,26 @@
 
 const SITE_BASE_URL = require('./config').siteBaseUrl;
 
+// Токены фото товаров в Max (см. bot/scripts/sync-photos.js и
+// bot/README.md, раздел «Фото товаров в боте»). Файл может отсутствовать
+// (например, пока фото ещё не загружали) – тогда просто нет фото у карточек,
+// без ошибки.
+let PHOTO_TOKENS = {};
+try {
+  PHOTO_TOKENS = require('./photoTokens.json');
+} catch (e) {
+  // файла ещё нет – это нормально
+}
+
 const CATEGORIES = [
   { slug: 'bukety', name: 'Букеты', fromPrice: '900 ₽', emoji: '🌸' },
-  { slug: 'poshtuchno', name: 'Цветы поштучно', fromPrice: '120 ₽', emoji: '🌷' },
+  {
+    slug: 'poshtuchno',
+    name: 'Цветы поштучно',
+    fromPrice: '120 ₽',
+    emoji: '🌷',
+    note: 'Соберём букет по вашим пожеланиям из любого количества цветов'
+  },
   { slug: 'kompozitsii', name: 'Цветочные композиции', fromPrice: '1000 ₽', emoji: '💐' }
 ];
 
@@ -41,16 +58,21 @@ const PRODUCTS = [
 // названия чуть отличаются от сайта. Если на сайте тоже переименуете –
 // поправьте и здесь для единообразия.
 
+function withPhotoToken(product) {
+  if (!product) return product;
+  return Object.assign({}, product, { photoToken: PHOTO_TOKENS[product.id] || null });
+}
+
 function getCategoryBySlug(slug) {
   return CATEGORIES.find((c) => c.slug === slug) || null;
 }
 
 function getProductsByCategory(slug) {
-  return PRODUCTS.filter((p) => p.category === slug);
+  return PRODUCTS.filter((p) => p.category === slug).map(withPhotoToken);
 }
 
 function getProductById(id) {
-  return PRODUCTS.find((p) => p.id === id) || null;
+  return withPhotoToken(PRODUCTS.find((p) => p.id === id) || null);
 }
 
 function siteRefFor(product) {

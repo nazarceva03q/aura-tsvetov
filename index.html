@@ -2061,8 +2061,12 @@
       );
     }).join('');
 
+    var titleText = category;
+    if (category === 'Цветы поштучно') {
+      titleText += ' — Соберём букет по вашим пожеланиям из любого количества цветов';
+    }
     catalogPanel.innerHTML =
-      '<h3 class="catalog-panel-title">' + category + '</h3>' +
+      '<h3 class="catalog-panel-title">' + titleText + '</h3>' +
       '<div class="product-grid">' + cardsHtml + '</div>';
   }
 
@@ -2149,9 +2153,9 @@
   // только на сервере бота (см. папку bot/) – в этом клиентском JS их нет
   // и быть не может. Сайт лишь шлёт JSON на вебхук бота; сервер сам решает,
   // что писать в Max, проверяет повторные заказы и т.д. (bot/src/notify.js).
-  // Замените MAX_LEAD_WEBHOOK_URL на реальный адрес после деплоя бота
-  // (см. bot/README.md, раздел «Деплой»).
-  var MAX_LEAD_WEBHOOK_URL = 'https://ЗАМЕНИТЕ-НА-АДРЕС-БОТА.example/webhook/lead';
+  // Yandex Cloud Function: один URL на всю функцию (без /webhook/lead) –
+  // тип запроса она определяет по форме тела (bot/index.js).
+  var MAX_LEAD_WEBHOOK_URL = 'https://functions.yandexcloud.net/d4e6kng4d21ne34l3665';
 
   function sendToMaxBot(data) {
     // Не блокируем UI: форма уже показывает «Спасибо» независимо от того,

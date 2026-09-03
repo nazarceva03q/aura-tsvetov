@@ -4,3 +4,4 @@ data/*.json
 !data/.gitkeep
 yandex-deploy.zip
 _yandex_staging/
+scripts/_photos_tmp/

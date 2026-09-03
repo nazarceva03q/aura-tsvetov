@@ -43,7 +43,7 @@ function buildCard(data, repeatInfo) {
     lines.push('👤 Повторный заказ (первое обращение: ' + formatDate(repeatInfo.firstSeen) + ')');
   }
   lines.push('Время: ' + formatDate(new Date().toISOString()));
-  return lines.join('\n');
+  return lines.join('\n\n');
 }
 
 // Возвращает { ok, text } – text полезен для логов/отладки даже если
