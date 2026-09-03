@@ -49,7 +49,8 @@ const PRODUCTS = [
   { id: 'kompozitsiya-6', category: 'kompozitsii', name: 'Композиция 6', price: '2400 ₽' },
   { id: 'kompozitsiya-7', category: 'kompozitsii', name: 'Композиция 7', price: '1750 ₽' },
   { id: 'kompozitsiya-8', category: 'kompozitsii', name: 'Композиция 8', price: '3200 ₽' },
-  { id: 'kompozitsiya-9', category: 'kompozitsii', name: 'Композиция 9', price: '2500 ₽' }
+  { id: 'kompozitsiya-9', category: 'kompozitsii', name: 'Композиция 9', price: '2500 ₽' },
+  { id: 'kompozitsiya-10', category: 'kompozitsii', name: 'Композиция 10', price: '2360 ₽' }
 ];
 
 // NB: в bot-названиях двух гортензий добавлены уточнения «(голубая)» /
