@@ -40,6 +40,11 @@ const PRODUCTS = [
   { id: 'gortenziya-1', category: 'poshtuchno', name: 'Гортензия (голубая)', price: '700 ₽' },
   { id: 'gortenziya-2', category: 'poshtuchno', name: 'Гортензия (сиреневая)', price: '700 ₽' },
   { id: 'roza-ekvador', category: 'poshtuchno', name: 'Роза (Эквадор)', price: 'от 180 ₽' },
+  { id: 'liliya', category: 'poshtuchno', name: 'Лилия', price: 'от 550 ₽' },
+  { id: 'hrizantema-odnogolovaya', category: 'poshtuchno', name: 'Хризантема одноголовая', price: 'от 350 ₽' },
+  { id: 'gvozdika', category: 'poshtuchno', name: 'Гвоздика', price: 'от 120 ₽' },
+  { id: 'gvozdika-odnogolovaya', category: 'poshtuchno', name: 'Гвоздика одноголовая', price: 'от 120 ₽' },
+  { id: 'hrizantema-kustovaya-bakardi', category: 'poshtuchno', name: 'Хризантема кустовая Бакарди', price: 'от 250 ₽' },
 
   { id: 'kompozitsiya-1', category: 'kompozitsii', name: 'Композиция 1', price: '1750 ₽' },
   { id: 'kompozitsiya-2', category: 'kompozitsii', name: 'Композиция 2', price: '2200 ₽' },
