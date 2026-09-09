@@ -70,6 +70,9 @@ app.post('/webhook/lead', async (req, res) => {
     phone: data.phone,
     productId: data.productId || '',
     productName: data.product || '',
+        price: data.price || '',
+        imageUrl: data.imageUrl || '',
+        slug: data.slug || '',
     siteRef: data.siteRef || '',
     photoRef: data.photoRef || '',
     comment: data.comment || ''

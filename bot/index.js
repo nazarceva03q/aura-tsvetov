@@ -89,6 +89,9 @@ module.exports.handler = async function (event, context) {
         phone: data.phone,
         productId: data.productId || '',
         productName: data.product || '',
+        price: data.price || '',
+        imageUrl: data.imageUrl || '',
+        slug: data.slug || '',
         siteRef: data.siteRef || '',
         photoRef: data.photoRef || '',
         comment: data.comment || ''

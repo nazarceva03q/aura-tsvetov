@@ -1,5 +1,8 @@
-// Основная логика бота: разбор входящих апдейтов от Max и сценарии диалога
-// (главное меню → категории → заказ; «Заказать звонок»; «Задать вопрос»).
+// Основная логика бота: разбор входящих апдейтов от Max и сценарий диалога
+// (согласие на обработку данных → вопрос → телефон → свободная переписка
+// с Олесей). Каталог/заказ/звонок из бота убраны — для этого на сайте есть
+// обычная форма; бот в Max теперь работает только как канал связи с
+// Олесей (согласие обязательно перед началом диалога, см. ТЗ).
 //
 // ВАЖНО про разбор апдейтов: официально подтверждены только базовые поля
 // Update-объекта (update_type, chat_id, user, timestamp) и типы событий
@@ -14,7 +17,6 @@
 
 const config = require('./config');
 const store = require('./store');
-const catalog = require('./catalog');
 const maxApi = require('./maxApi');
 const notify = require('./notify');
 
@@ -42,16 +44,14 @@ function extractAutoName(update) {
 // Работает для ЛЮБОГО пользователя по одному user_id, публичный username
 // для этого не нужен – раньше пробовали ссылку вида https://max.ru/<username>,
 // но у большинства людей username вообще не задан, и ссылки не было.
-// Отправляется ОТДЕЛЬНЫМ markdown-сообщением (см. sendAskerInfo), а не
-// вместе с текстом вопроса – текст вопроса пишет сам покупатель и может
-// случайно содержать символы вроде * или _, которые в markdown-режиме
-// исказили бы вид сообщения.
-async function sendAskerInfo(targetUserId, name, askerId) {
+// Отправляется ОТДЕЛЬНЫМ markdown-сообщением (а не вместе с текстом
+// вопроса) – текст вопроса пишет сам покупатель и может случайно содержать
+// символы вроде * или _, которые в markdown-режиме искажают вид сообщения.
+async function sendAskerInfo(targetUserId, name, askerId, phone) {
   const label = name || ('Пользователь ' + askerId);
-  await maxApi.sendMarkdownMessage(
-    { userId: targetUserId },
-    maxApi.userMention(label, askerId) + '\nid: ' + askerId
-  );
+  const lines = [maxApi.userMention(label, askerId)];
+  if (phone) lines.push('📞 ' + notify.formatPhone(phone));
+  await maxApi.sendMarkdownMessage({ userId: targetUserId }, lines.join('\n'));
 }
 
 function extractCallbackData(update) {
@@ -95,53 +95,51 @@ function extractContact(update) {
   };
 }
 
-function extractStartPayload(update) {
-  return update.payload || update.start_payload || null;
-}
-
 // ---------- вспомогательное ----------
 
 function isValidPhone(rawPhone) {
   return notify.normalizePhone(rawPhone).length === 11;
 }
 
-function categoryDisplayName(slug) {
-  const c = catalog.getCategoryBySlug(slug);
-  return c ? c.name : slug;
+// ---------- согласие на обработку персональных данных ----------
+
+// Ссылка на «Согласие на обработку персональных данных» на сайте – тот же
+// текст, что и в чекбоксе формы заказа на сайте (152-ФЗ). #doc=consent
+// открывает этот документ напрямую (см. index.html, openFromSiteRef).
+function consentUrl() {
+  return config.siteBaseUrl + '/#doc=consent';
 }
 
-// Max не умеет в закреплённую кнопку-меню сбоку от переписки (в отличие от
-// Telegram) – ближайший рабочий заменитель: кнопка «Меню» почти на каждом
-// сообщении бота, чтобы она всегда была под рукой прямо в последнем
-// сообщении, без необходимости листать назад или набирать /start. Не
-// используется в служебном чате владелицы (там своя логика, см. isOwner) –
-// там кнопка «В меню» открывала бы витрину, которую там как раз не
-// показываем.
-function withMenu(rows) {
-  const r = rows ? rows.slice() : [];
-  r.push([maxApi.callbackButton('🏠 Меню', 'menu:root')]);
-  return r;
+// Max не поддерживает настоящий чекбокс в клавиатуре бота (в отличие от
+// формы на сайте) – ближайший рабочий аналог – кнопка-подтверждение
+// («callback»), которую нужно нажать до того, как бот продолжит диалог.
+function consentRows() {
+  return [[maxApi.callbackButton('☑️ Согласен(на) на обработку персональных данных', 'consent:start')]];
 }
 
-// ---------- главное меню ----------
-
-const WELCOME_TEXT = 'Добрый день! Что вас интересует?';
-
-function mainMenuRows() {
-  const c = catalog.CATEGORIES;
-  // По одной кнопке в строке – так они шире и название всегда видно целиком
-  // (на узком экране 2-3 кнопки в ряд обрезали текст).
-  return [
-    [maxApi.callbackButton(c[0].emoji + ' ' + c[0].name, 'category:' + c[0].slug)],
-    [maxApi.callbackButton(c[1].emoji + ' ' + c[1].name, 'category:' + c[1].slug)],
-    [maxApi.callbackButton(c[2].emoji + ' ' + c[2].name, 'category:' + c[2].slug)],
-    [maxApi.callbackButton('📞 Заказать звонок', 'menu:call')],
-    [maxApi.callbackButton('💬 Задать вопрос', 'menu:question')]
-  ];
+async function sendGreeting(userId) {
+  await store.setSession(userId, { step: 'awaiting_consent' });
+  await maxApi.sendMessage(
+    { userId },
+    'Добрый день!\n\n' +
+      'Чтобы начать диалог, пожалуйста, подтвердите согласие на обработку персональных данных ' +
+      '(имя, телефон) в соответствии с 152-ФЗ.\n' +
+      'Ознакомиться: ' + consentUrl(),
+    consentRows()
+  );
 }
 
-async function sendMainMenu(userId) {
-  await maxApi.sendMessage({ userId }, WELCOME_TEXT, mainMenuRows());
+async function remindAboutConsent(userId) {
+  await maxApi.sendMessage(
+    { userId },
+    'Чтобы продолжить, подтвердите, пожалуйста, согласие на обработку персональных данных — нажмите кнопку выше.',
+    consentRows()
+  );
+}
+
+async function proceedAfterConsent(userId) {
+  await store.setSession(userId, { step: 'awaiting_message' });
+  await maxApi.sendMessage({ userId }, 'Чем можем вам помочь? Ответим здесь в чате как можно скорее');
 }
 
 // ---------- служебный чат владелицы (MAX_OWNER_CHAT_ID) ----------
@@ -151,7 +149,7 @@ async function sendMainMenu(userId) {
 async function sendOwnerGreeting(userId) {
   await maxApi.sendMessage(
     { userId },
-    'Здравствуйте! Это служебный чат бота «Аура цветов» — сюда будут приходить уведомления о новых заявках и вопросы покупателей. Витрина магазина здесь не открывается.'
+    'Здравствуйте! Это служебный чат бота «Аура цветов» — сюда будут приходить вопросы покупателей. Витрина магазина здесь не открывается.'
   );
 }
 
@@ -162,232 +160,82 @@ async function sendOwnerNotice(userId) {
   );
 }
 
-// ---------- категория → карточки товаров ----------
+// ---------- первый вопрос → запрос телефона → пересылка Олесе ----------
 
-async function sendCategory(userId, slug) {
-  const category = catalog.getCategoryBySlug(slug);
-  if (!category) return sendMainMenu(userId);
-
-  const products = catalog.getProductsByCategory(slug);
-  var intro = category.emoji + ' ' + category.name + ' — выберите, что понравится:';
-  if (category.note) intro = category.emoji + ' ' + category.name + ' — ' + category.note + ':';
-  await maxApi.sendMessage({ userId }, intro);
-
-  // Фото загружены заранее в Max и переиспользуются по токену – см.
-  // scripts/sync-photos.js и src/photoTokens.json. Если для товара пока нет
-  // токена (фото не синхронизировали), карточка уходит без фото, просто
-  // текстом – ничего не падает.
-  for (const p of products) {
-    await maxApi.sendMessage(
-      { userId },
-      p.name + '\n' + p.price,
-      withMenu([[maxApi.callbackButton('Хочу такой', 'order:' + p.id)]]),
-      p.photoToken
-    );
+async function handleAwaitingMessage(update, userId, session) {
+  const text = extractMessageText(update);
+  if (!text || !text.trim()) {
+    await maxApi.sendMessage({ userId }, 'Напишите, пожалуйста, ваш вопрос одним сообщением.');
+    return;
   }
-}
 
-// ---------- сценарий заказа (после «Хочу такой») ----------
-
-// Ссылка на «Согласие на обработку персональных данных» на сайте – тот же
-// текст, что и в чекбоксе формы заказа на сайте (152-ФЗ). #doc=consent
-// открывает этот документ напрямую (см. index.html, openFromSiteRef).
-function consentUrl() {
-  return config.siteBaseUrl + '/#doc=consent';
-}
-
-async function startOrderFlow(userId, productId) {
-  const product = catalog.getProductById(productId);
-  if (!product) return sendMainMenu(userId);
-
-  await store.setSession(userId, {
-    step: 'order_awaiting_consent',
-    order: {
-      productId: product.id,
-      productName: product.name,
-      category: product.category,
-      siteRef: catalog.siteRefFor(product)
-    }
-  });
-
-  await maxApi.sendMessage(
-    userId ? { userId } : {},
-    'Для оформления заказа нужно ваше согласие на обработку персональных данных (имя, телефон) в соответствии с 152-ФЗ.\n' +
-      'Ознакомиться: ' + consentUrl(),
-    withMenu([[maxApi.callbackButton('✅ Согласен(на)', 'consent:order')]])
-  );
-}
-
-async function proceedToOrderContact(userId) {
-  const session = await store.getSession(userId);
-  if (session.step !== 'order_awaiting_consent' || !session.order) return sendMainMenu(userId);
-  session.step = 'order_awaiting_contact';
+  session.step = 'awaiting_phone';
+  session.pendingText = text.trim();
   await store.setSession(userId, session);
 
   await maxApi.sendMessage(
-    userId ? { userId } : {},
-    'Отлично! Оставьте, пожалуйста, имя и телефон, и мы уточним детали.\n🎁 Скидка 10% на первый заказ\n\n' +
+    { userId },
+    'Чтобы передать ваш вопрос, поделитесь, пожалуйста, номером телефона.\n' +
       'Нажмите кнопку, чтобы поделиться номером одним тапом, либо просто напишите его в чат.',
-    withMenu([[maxApi.requestContactButton('📱 Поделиться контактом')]])
+    [[maxApi.requestContactButton('📱 Поделиться контактом')]]
   );
 }
 
-async function handleOrderAwaitingContact(update, userId, session) {
+// Имя не спрашиваем отдельным шагом – берём то, что Max отдаёт сам
+// (профиль пользователя или ФИО из vCard контакта), см. extractAutoName/
+// parseVcfName. Если имени нет — Олесе просто не показываем строку «Имя».
+async function handleAwaitingPhone(update, userId, session) {
   const contact = extractContact(update);
   const text = extractMessageText(update);
-
-  let phone = null;
-  let contactName = null;
-  if (contact && contact.phone) {
-    phone = contact.phone;
-    contactName = contact.name;
-  } else if (text && isValidPhone(text)) {
-    phone = text;
-  } else {
-    await maxApi.sendMessage(
-      { userId },
-      'Не получилось распознать номер. Отправьте его ещё раз, например: +7 999 123-45-67',
-      withMenu()
-    );
-    return;
-  }
-
-  session.order.phone = notify.normalizePhone(phone);
-  const autoName = contactName || extractAutoName(update);
-
-  if (autoName) {
-    session.order.autoName = autoName;
-    session.step = 'order_awaiting_name';
-    await store.setSession(userId, session);
-    await maxApi.sendMessage(
-      { userId },
-      'Ваше имя: ' + autoName + '. Всё верно?\n\nЕсли нет — просто напишите, как к вам обращаться.',
-      withMenu([[maxApi.callbackButton('✅ Всё верно', 'name_confirm')]])
-    );
-  } else {
-    session.step = 'order_awaiting_name';
-    await store.setSession(userId, session);
-    await maxApi.sendMessage({ userId }, 'Как вас зовут?', withMenu());
-  }
-}
-
-async function finishOrder(userId, name, session) {
-  const order = session.order;
-  await notify.sendLeadNotification({
-    source: 'Бот Max → ' + categoryDisplayName(order.category),
-    name,
-    phone: order.phone,
-    productId: order.productId,
-    productName: order.productName,
-    siteRef: order.siteRef
-  });
-  await maxApi.sendMessage(
-    { userId },
-    'Спасибо, ' + name + '! Свяжемся с вами в ближайшее время',
-    withMenu()
-  );
-  await store.clearSession(userId);
-}
-
-async function handleOrderAwaitingName(update, userId, session) {
-  const callbackData = extractCallbackData(update);
-  const text = extractMessageText(update);
-
-  if (callbackData === 'name_confirm' && session.order.autoName) {
-    await finishOrder(userId, session.order.autoName, session);
-    return;
-  }
-  if (text && text.trim()) {
-    await finishOrder(userId, text.trim(), session);
-    return;
-  }
-  await maxApi.sendMessage({ userId }, 'Напишите, пожалуйста, ваше имя одним сообщением.', withMenu());
-}
-
-// ---------- «Заказать звонок» ----------
-
-async function startCallFlow(userId) {
-  await store.setSession(userId, { step: 'call_awaiting_consent' });
-  await maxApi.sendMessage(
-    { userId },
-    'Для звонка нужно ваше согласие на обработку персональных данных (телефон) в соответствии с 152-ФЗ.\n' +
-      'Ознакомиться: ' + consentUrl(),
-    withMenu([[maxApi.callbackButton('✅ Согласен(на)', 'consent:call')]])
-  );
-}
-
-async function proceedToCallContact(userId) {
-  await store.setSession(userId, { step: 'call_awaiting_contact' });
-  await maxApi.sendMessage(
-    { userId },
-    'Оставьте номер, перезвоним в течение часа. 🎁 Скидка 10% на первый заказ',
-    withMenu([[maxApi.requestContactButton('📱 Поделиться контактом')]])
-  );
-}
-
-async function handleCallAwaitingContact(update, userId) {
-  const contact = extractContact(update);
-  const text = extractMessageText(update);
-  let phone = contact && contact.phone ? contact.phone : text;
+  const phone = contact && contact.phone ? contact.phone : text;
 
   if (!phone || !isValidPhone(phone)) {
     await maxApi.sendMessage(
       { userId },
       'Не получилось распознать номер. Отправьте его ещё раз, например: +7 999 123-45-67',
-      withMenu()
+      [[maxApi.requestContactButton('📱 Поделиться контактом')]]
     );
     return;
   }
 
-  await notify.sendLeadNotification({
-    source: 'Заказать звонок',
-    phone,
-    interestedIn: 'просит перезвонить'
-  });
-  await maxApi.sendMessage({ userId }, 'Спасибо! Скоро перезвоним', withMenu());
-  await store.clearSession(userId);
+  const name = (contact && contact.name) || extractAutoName(update) || '';
+  const normalizedPhone = notify.normalizePhone(phone);
+
+  session.step = 'chatting';
+  session.name = name;
+  session.phone = normalizedPhone;
+  const pendingText = session.pendingText;
+  delete session.pendingText;
+  await store.setSession(userId, session);
+
+  await forwardToOwner(userId, pendingText, name, normalizedPhone);
+  await maxApi.sendMessage(
+    { userId },
+    (name ? 'Спасибо, ' + name + '! ' : 'Спасибо! ') + 'Мы получили ваше сообщение, скоро ответим!'
+  );
 }
 
-// ---------- «Задать вопрос» ----------
-
-async function startQuestionFlow(userId) {
-  await store.setSession(userId, { step: 'awaiting_question' });
-  await maxApi.sendMessage({ userId }, 'Напишите ваш вопрос, ответим как можно скорее', withMenu());
-}
-
-// Покупатель нажал «Ответить» под ответом Олеси – продолжаем тот же вопрос
-// (activeQuestionId), а не заводим новый с нуля.
-async function startReplyFlow(userId, questionId) {
-  await store.setSession(userId, { step: 'awaiting_question', activeQuestionId: questionId });
-  await maxApi.sendMessage({ userId }, 'Напишите сообщение:', withMenu());
-}
-
-async function handleAwaitingQuestion(update, userId, session) {
+// После первого обмена (согласие + вопрос + телефон) клиент пишет свободно –
+// каждое сообщение сразу уходит Олесе, без повторных запросов согласия/номера.
+async function handleChatting(update, userId, session) {
   const text = extractMessageText(update);
-  if (!text || !text.trim()) {
-    await maxApi.sendMessage({ userId }, 'Напишите вопрос одним сообщением, пожалуйста.', withMenu());
+  if (!text || !text.trim()) return;
+  await forwardToOwner(userId, text.trim(), session.name, session.phone);
+}
+
+async function forwardToOwner(userId, text, name, phone) {
+  if (!config.ownerChatId) {
+    console.warn('[bot] MAX_OWNER_CHAT_ID не настроен, вопрос не переслан Олесе:', text);
     return;
   }
-
-  // Если это продолжение диалога (кнопка «Ответить» у покупателя) – пишем в
-  // ту же карточку вопроса, иначе заводим новую.
-  const questionId = (session && session.activeQuestionId) || 'q' + Date.now();
-  const askerName = extractAutoName(update);
-  await store.saveQuestion(questionId, userId, text.trim(), askerName);
-
-  if (config.ownerChatId) {
-    await sendAskerInfo(config.ownerChatId, askerName, userId);
-    await maxApi.sendMessage(
-      { userId: config.ownerChatId },
-      '💬 Вопрос: ' + text.trim(),
-      [[maxApi.callbackButton('Ответить', 'answer:' + questionId)]]
-    );
-  } else {
-    console.warn('[bot] MAX_OWNER_CHAT_ID не настроен, вопрос не переслан Олесе:', text.trim());
-  }
-
-  await maxApi.sendMessage({ userId }, 'Спасибо, передали ваш вопрос!', withMenu());
-  await store.clearSession(userId);
+  const questionId = 'q' + Date.now();
+  await store.saveQuestion(questionId, userId, text, name, phone);
+  await sendAskerInfo(config.ownerChatId, name, userId, phone);
+  await maxApi.sendMessage(
+    { userId: config.ownerChatId },
+    '❓ Вопрос: ' + text,
+    [[maxApi.callbackButton('Ответить', 'answer:' + questionId)]]
+  );
 }
 
 // Олеся нажала «Ответить» под вопросом
@@ -398,7 +246,7 @@ async function startAnswerFlow(ownerUserId, questionId) {
     return;
   }
   await store.setSession(ownerUserId, { step: 'awaiting_answer', answeringQuestionId: questionId });
-  await sendAskerInfo(ownerUserId, question.userName, question.userId);
+  await sendAskerInfo(ownerUserId, question.userName, question.userId, question.userPhone);
   await maxApi.sendMessage({ userId: ownerUserId }, 'Напишите текст ответа:');
 }
 
@@ -415,13 +263,9 @@ async function handleAwaitingAnswer(update, ownerUserId, session) {
     return;
   }
 
-  // «Ответить» под ответом – чтобы покупатель мог продолжить диалог или
-  // просто написать «Спасибо», не начиная вопрос с нуля.
-  await maxApi.sendMessage(
-    { userId: question.userId },
-    '💬 Ответ на ваш вопрос:\n\n' + text.trim(),
-    withMenu([[maxApi.callbackButton('Ответить', 'reply:' + session.answeringQuestionId)]])
-  );
+  // Клиенту приходит обычное сообщение без пометок «Ответ:» и без кнопок –
+  // как если бы ей написал живой человек в чате (см. ТЗ).
+  await maxApi.sendMessage({ userId: question.userId }, text.trim());
   await store.markQuestionAnswered(session.answeringQuestionId);
   await maxApi.sendMessage({ userId: ownerUserId }, 'Ответ отправлен!');
   await store.clearSession(ownerUserId);
@@ -452,40 +296,35 @@ async function handleUpdate(update) {
 
     // Печатаем user_id для КАЖДОГО апдейта (не только bot_started) – это
     // единственный способ узнать chat_id Олеси для MAX_OWNER_CHAT_ID (бот не
-    // может писать первым). Если её первое «Начать» пришлось на момент, когда
+        // может писать первым). Если её первое «Начать» пришлось на момент, когда
     // функция ещё падала на импорте, bot_started мог не долететь до этой
     // точки кода вообще – а любое следующее нажатие кнопки/сообщение всё
     // равно попадёт в этот лог.
     console.log('[bot] update_type=' + update.update_type + ', user_id=' + userId);
 
     // Олеся (MAX_OWNER_CHAT_ID) пишет боту в тот же чат, куда приходят
-    // уведомления о заявках – без этой проверки бот показывал бы ей витрину
-    // магазина точно так же, как обычному покупателю, стоит ей случайно
-    // нажать кнопку или что-то написать. «Ответить» под вопросом покупателя
-    // (answer:<id>) и сам ответ (шаг awaiting_answer) – её законные действия,
-    // их не блокируем; всё остальное для неё – заглушка ниже.
+    // пересланные вопросы – без этой проверки бот вёл бы её через сценарий
+    // согласия точно так же, как обычного покупателя. «Ответить» под
+    // вопросом покупателя (answer:<id>) и сам ответ (шаг awaiting_answer) –
+    // её законные действия, их не блокируем; всё остальное для неё –
+    // заглушка ниже.
     const isOwner = Boolean(config.ownerChatId) && String(userId) === String(config.ownerChatId);
 
-    // Команда /start (Max показывает её подсказкой при вводе «/» — см.
-    // scripts/set-commands.js) – всегда возвращает в главное меню, из
-    // любого места сценария, не мешая при этом обычной переписке (это не
-    // отдельная всегда-видимая кнопка в чате – в Max таких нет, см. README).
+    // Команда /start – всегда возвращает к приветствию и заново запрашивает
+    // согласие, из любого места сценария (это не отдельная всегда-видимая
+    // кнопка в чате – в Max таких нет, см. README).
     if (update.update_type === 'message_created') {
       const cmdText = (extractMessageText(update) || '').trim().toLowerCase();
-      if (cmdText === '/start' || cmdText === '/menu') {
+      if (cmdText === '/start') {
         await store.clearSession(userId);
         if (isOwner) return sendOwnerGreeting(userId);
-        await sendMainMenu(userId);
-        return;
+        return sendGreeting(userId);
       }
     }
 
     if (update.update_type === 'bot_started') {
-      const payload = extractStartPayload(update);
-      if (payload) console.log('[bot] deep-link payload=' + payload);
       if (isOwner) return sendOwnerGreeting(userId);
-      await sendMainMenu(userId);
-      return;
+      return sendGreeting(userId);
     }
 
     if (update.update_type === 'message_callback') {
@@ -497,29 +336,16 @@ async function handleUpdate(update) {
 
       // 'answer:' разрешён владелице всегда – это её кнопка под вопросом.
       if (data.indexOf('answer:') === 0) return startAnswerFlow(userId, data.slice('answer:'.length));
-      // 'reply:' – покупатель продолжает диалог под ответом Олеси.
-      if (data.indexOf('reply:') === 0) return startReplyFlow(userId, data.slice('reply:'.length));
 
       if (isOwner) return sendOwnerNotice(userId);
 
-      // Префиксы разных типов кнопок НЕ должны пересекаться (раньше 'menu:call'
-      // и 'menu:question' перехватывались общей проверкой data.indexOf('menu:'),
-      // предназначенной для категорий, и уходили в sendCategory с несуществующим
-      // слагом 'call'/'question' – отсюда и отдельный префикс 'category:').
-      if (data === 'menu:root') return sendMainMenu(userId);
-      if (data === 'menu:call') return startCallFlow(userId);
-      if (data === 'menu:question') return startQuestionFlow(userId);
-      if (data.indexOf('category:') === 0) return sendCategory(userId, data.slice('category:'.length));
-      if (data.indexOf('order:') === 0) return startOrderFlow(userId, data.slice('order:'.length));
-      if (data === 'consent:order') return proceedToOrderContact(userId);
-      if (data === 'consent:call') return proceedToCallContact(userId);
-
-      // name_confirm обрабатывается ниже, внутри шага order_awaiting_name –
-      // callback тоже проходит через сессионный switch, поэтому падаем туда же.
+      if (data === 'consent:start') return proceedAfterConsent(userId);
+      // остальные callback'и в текущем сценарии не ожидаются – падаем в
+      // обработку по шагу сессии ниже (там для message_callback ничего не
+      // предусмотрено, апдейт будет тихо проигнорирован).
     }
 
-    // – всё остальное (текстовые сообщения и оставшиеся callback'и вроде
-    //   name_confirm) разбирается по текущему шагу сессии пользователя –
+    // – всё остальное (текстовые сообщения и не распознанные выше callback'и) –
     const session = await store.getSession(userId);
 
     if (isOwner && session.step !== 'awaiting_answer') {
@@ -528,46 +354,29 @@ async function handleUpdate(update) {
     }
 
     switch (session.step) {
-      case 'order_awaiting_consent':
-        if (update.update_type === 'message_created') {
-          return maxApi.sendMessage(
-            { userId },
-            'Чтобы продолжить оформление, нажмите «✅ Согласен(на)» выше.',
-            withMenu()
-          );
-        }
+      case 'awaiting_consent':
+        // Реально нельзя начать диалог без согласия – на любое сообщение
+        // до нажатия кнопки просто напоминаем про неё, дальше сценарий не
+        // пускаем.
+        if (update.update_type === 'message_created') return remindAboutConsent(userId);
         return;
-      case 'call_awaiting_consent':
-        if (update.update_type === 'message_created') {
-          return maxApi.sendMessage(
-            { userId },
-            'Чтобы продолжить, нажмите «✅ Согласен(на)» выше.',
-            withMenu()
-          );
-        }
-        return;
-      case 'order_awaiting_contact':
-        return handleOrderAwaitingContact(update, userId, session);
-      case 'order_awaiting_name':
-        return handleOrderAwaitingName(update, userId, session);
-      case 'call_awaiting_contact':
-        return handleCallAwaitingContact(update, userId);
-      case 'awaiting_question':
-        return handleAwaitingQuestion(update, userId, session);
+      case 'awaiting_message':
+        return handleAwaitingMessage(update, userId, session);
+      case 'awaiting_phone':
+        return handleAwaitingPhone(update, userId, session);
+      case 'chatting':
+        return handleChatting(update, userId, session);
       case 'awaiting_answer':
         return handleAwaitingAnswer(update, userId, session);
       default:
-        // Свободный текст без активного сценария – не оставляем пользователя
-        // в тупике, показываем меню ещё раз. (isOwner сюда не попадает –
-        // отсечено проверкой выше.)
-        if (update.update_type === 'message_created') {
-          await maxApi.sendMessage({ userId }, 'Не совсем поняла 🙂 Вот, что я умею:');
-          await sendMainMenu(userId);
-        }
+        // Нет сессии (самое первое сообщение без bot_started, или сессию
+        // сбросили) – начинаем с приветствия и согласия, как и в любом
+        // другом месте без активного согласия.
+        if (update.update_type === 'message_created') return sendGreeting(userId);
     }
   } catch (err) {
     console.error('[bot] ошибка обработки апдейта:', err, JSON.stringify(update));
   }
 }
 
-module.exports = { handleUpdate, sendMainMenu };
+module.exports = { handleUpdate };

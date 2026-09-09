@@ -36,6 +36,9 @@ function buildCard(data, repeatInfo, hasPhoto) {
   if (data.name) lines.push('Имя: ' + data.name);
   lines.push('Телефон: ' + formatPhone(normalizePhone(data.phone)));
   if (data.productName) lines.push('Товар: ' + data.productName);
+  const product = data.productId ? catalog.getProductById(data.productId) : null;
+  if (product) { lines.push('Артикул: ' + product.id); lines.push('Цена: ' + product.price); }
+  if (data.imageUrl && /^https:\/\/aura-flower\.shop\/products\/[a-z0-9-]+\.webp$/.test(data.imageUrl)) lines.push('Фото товара: ' + data.imageUrl);
   // Ссылку на сайт оставляем всегда – даже когда фото уже прикреплено к
   // сообщению, ссылка полезна, чтобы открыть карточку товара на сайте целиком.
   if (data.siteRef) lines.push('🔗 Ссылка на сайте: ' + data.siteRef);

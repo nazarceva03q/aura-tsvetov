@@ -20,7 +20,7 @@ try {
 }
 
 const CATEGORIES = [
-  { slug: 'bukety', name: 'Букеты', fromPrice: '900 ₽', emoji: '🌸' },
+  { slug: 'bukety', name: 'Букеты', fromPrice: '1350 ₽', emoji: '🌸' },
   {
     slug: 'poshtuchno',
     name: 'Цветы поштучно',
@@ -28,7 +28,7 @@ const CATEGORIES = [
     emoji: '🌷',
     note: 'Соберём букет по вашим пожеланиям из любого количества цветов'
   },
-  { slug: 'kompozitsii', name: 'Цветочные композиции', fromPrice: '1000 ₽', emoji: '💐' }
+  { slug: 'kompozitsii', name: 'Цветочные композиции', fromPrice: '1500 ₽', emoji: '💐' }
 ];
 
 const PRODUCTS = [

@@ -59,12 +59,11 @@ async function main() {
     process.exit(1);
   }
   const res = await patchCommands([
-    { name: 'start', description: 'Показать меню' },
-    { name: 'menu', description: 'Показать меню' }
+    { name: 'start', description: 'Начать заново' }
   ]);
   console.log(res.status, res.body);
   if (res.status >= 200 && res.status < 300) {
-    console.log('Готово. В чате бота теперь можно ввести «/» — появятся команды start и menu, обе открывают меню заново.');
+    console.log('Готово. В чате бота теперь можно ввести «/» — появится команда start, она начинает диалог заново.');
   }
 }
 
