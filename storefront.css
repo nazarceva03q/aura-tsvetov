@@ -178,6 +178,10 @@ body:has(dialog[open]) { overflow: hidden; }
   .topbar-meta { grid-row: 1; grid-column: 2; align-items: flex-end; }
   .topbar-hours, .topbar-phone { min-height: 0; line-height: 1.5; white-space: nowrap; }
 }
+@media (max-width: 767px) {
+  /* Contact-to-image gap equals the image-to-screen inset (6px inside the MAX target). */
+  .topbar { column-gap: calc(var(--header-edge) - 6px); }
+}
 @media (max-width: 600px) {
   .hero { padding-top: 52px; }
   .topbar-hours { font-size: 14px; }
