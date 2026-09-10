@@ -62,7 +62,7 @@ body:has(dialog[open]) { overflow: hidden; }
 .cat-photo { width: 72px; height: 84px; flex: none; aspect-ratio: auto; background: none; }
 .cat-photo img { object-fit: cover; border: 0; }
 .cat-body { flex: 1; padding: 12px; }
-.cat-name { font-family: var(--font-body); font-size: 20px; }
+.cat-name { font-family: var(--font-body); font-size: 18px; }
 .cat-price { font-size: 14px; font-weight: 700; }
 .cat-card[aria-expanded="true"] { background: var(--color-bg-card); box-shadow: none; }
 /* Gallery geometry, backgrounds, buttons and arrows use the original inline stylesheet. */
@@ -125,7 +125,8 @@ body:has(dialog[open]) { overflow: hidden; }
 }
 @media (max-width: 767px) {
   .categories, .how-we-work, .promotions, .reviews, .faq, .location, .delivery, .bouquet-help { padding: var(--section-gap-mobile) 16px; }
-  .topbar { padding: 16px 16px 0 8px; gap: 12px; }
+  /* The 32px MAX image has 6px of inset inside its 44px touch target. */
+  .topbar { padding: 16px 2px 0 8px; gap: 12px; }
   .brand img { width: 88px; height: 88px; }
   .topbar-meta { display: grid; grid-template-columns: 1fr 44px; align-items: center; gap: 0 8px; }
   .topbar-hours { grid-column: 1; font-size: 14px; }
@@ -216,7 +217,7 @@ body:has(dialog[open]) { overflow: hidden; }
   }
   .hero-trust, .promo-text, .field-label, .field-checkbox .consent-text,
   .product-details, .product-composition { font-size: 16px; line-height: 1.5; }
-  .cat-name { font-size: 22px; line-height: 1.3; }
+  .cat-name { font-size: 20px; line-height: 1.35; }
   .cat-price { font-size: 18px; line-height: 1.4; }
   .product-title, .delivery-grid h3 { font-size: 20px; line-height: 1.35; }
   .product-price-tag { font-size: 22px; line-height: 1.3; }
@@ -231,3 +232,4 @@ body:has(dialog[open]) { overflow: hidden; }
 /* Product titles remain visually consistent while providing crawlable links. */
 .product-title a { color: inherit; text-decoration: none; }
 .product-title a:hover { text-decoration: underline; text-underline-offset: 4px; }
+.promo-preorder-title { margin: 0; color: var(--color-heading); font-family: var(--font-body); font-size: 24px; font-weight: 700; line-height: 1.3; }
