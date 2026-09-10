@@ -34,7 +34,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=PT+Sans:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=PT+Serif:wght@400;700&amp;family=Inter:wght@400;500;600;700&amp;subset=cyrillic,cyrillic-ext,latin&amp;display=swap">
 
 <!--
   Структурированные данные (schema.org) для поисковиков (Google, Яндекс).
@@ -151,8 +151,8 @@
     --panel-wash-2: rgba(255, 255, 255, 0.5);
     --panel-wash-3: rgba(255, 255, 255, 0.14);
 
-    --font-display: 'Lora', Georgia, 'Times New Roman', serif;
-    --font-body: 'PT Sans', Arial, sans-serif;
+    --font-heading: 'PT Serif', Georgia, serif;
+    --font-body: 'Inter', -apple-system, sans-serif;
 
     /* type scale – fixed px-equivalent sizes per spec (rem, so it still respects browser zoom) */
     --fs-h1: 3rem;           /* 48px */
@@ -326,7 +326,7 @@
     gap: var(--space-lg);
   }
   .hero h1 {
-    font-family: var(--font-display);
+    font-family: var(--font-body);
     font-weight: 700;
     font-style: normal;
     color: var(--color-heading);
@@ -486,7 +486,7 @@
     padding: var(--space-3xl) var(--space-md);
   }
   .section-title {
-    font-family: var(--font-display);
+    font-family: var(--font-body);
     font-weight: 700;
     font-style: normal;
     color: var(--color-heading);
@@ -543,7 +543,7 @@
   }
   .cat-body-text { min-width: 0; }
   .cat-name {
-    font-family: var(--font-display);
+    font-family: var(--font-body);
     font-weight: 700;
     font-style: normal;
     color: var(--color-heading);
@@ -581,7 +581,7 @@
     to { opacity: 1; transform: translateY(0); }
   }
   .catalog-panel-title {
-    font-family: var(--font-display);
+    font-family: var(--font-body);
     font-weight: 700;
     font-style: normal;
     color: var(--color-heading);
@@ -776,7 +776,7 @@
   .doc-close:hover { background: var(--green-tint-6); border-color: var(--color-heading); }
   .doc-close:focus-visible { outline: 2px solid var(--color-heading); outline-offset: 2px; }
   .doc-title {
-    font-family: var(--font-display);
+    font-family: var(--font-body);
     font-weight: 700;
     color: var(--color-heading);
     font-size: var(--fs-h2);
@@ -789,7 +789,7 @@
     margin: 0 0 var(--space-lg);
   }
   .doc-body h3 {
-    font-family: var(--font-display);
+    font-family: var(--font-body);
     color: var(--color-heading);
     font-weight: 700;
     font-size: var(--fs-body);
@@ -1112,7 +1112,7 @@
     gap: 2px;
   }
   .review-score {
-    font-family: var(--font-display);
+    font-family: var(--font-body);
     font-weight: 700;
     color: var(--color-heading);
     font-size: var(--fs-hero-sub);
@@ -1204,7 +1204,7 @@
     gap: var(--space-lg);
   }
   .footer-col h3 {
-    font-family: var(--font-display);
+    font-family: var(--font-body);
     font-weight: 700;
     color: var(--color-heading);
     font-size: var(--fs-body);
@@ -1284,7 +1284,7 @@
   .lead-close:active { transform: translateY(1px); }
 
   .lead-title {
-    font-family: var(--font-display);
+    font-family: var(--font-body);
     font-weight: 700;
     font-style: normal;
     color: var(--color-heading);
@@ -1425,7 +1425,7 @@
 <section class="aura-band">
   <div class="topbar">
     <div class="brand">
-      <img src="/products/aura-logo-pastel.png" alt="Аура – цветочный магазин в Оренбурге, логотип" width="132" height="132">
+      <img src="/products/aura-logo-compact.png" alt="Аура – цветочный магазин в Оренбурге, логотип" width="80" height="80">
       <span class="brand-name">Аура – цветочный магазин</span>
     </div>
     <nav class="topbar-nav" aria-label="Навигация"><a href="#categories">Каталог</a><a href="#howWeWork">Доставка</a><a href="#location">Адрес</a></nav>
@@ -1549,6 +1549,14 @@
       </span>
       <p class="step-text">Доставляем в удобное для вас время, часы работы 8:00–20:00, ежедневно</p>
     </div>
+    <div class="step reveal">
+      <span class="step-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 10h18l-2-6H5zM4 10v10h16V10M9 20v-6h6v6M3 10a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/></svg>
+        <span class="step-number">4</span>
+      </span>
+      <p class="step-text">Если удобнее – заберите букет самостоятельно без доплаты за доставку <a class="pickup-map-link" href="#location">Где мы находимся</a></p>
+    </div>
+
 
   </div>
 </section>
@@ -1599,12 +1607,19 @@
 
 <section class="reviews" id="reviews">
   <h2 class="section-title">Отзывы на Яндекс картах</h2>
-  <a class="review-badge reveal" href="https://yandex.ru/maps/org/aura/235676666509/reviews/" target="_blank" rel="noopener">
-
-    <span class="review-badge-text">
-      <span class="review-source">Читать отзывы покупателей →</span>
-    </span>
-  </a>
+  <div class="customer-reviews" id="reviewTrack" tabindex="0" aria-label="Отзывы покупателей">
+    <figure class="customer-review"><figcaption><strong>Мария</strong><span class="review-stars" role="img" aria-label="5 из 5 звёзд">★★★★★</span></figcaption><blockquote><p>Спасибо огромное сотрудникам магазина, создали великолепную композицию. Подобрали цветы с учетом моего запроса и финансовых возможностей. Сотрудники очень внимательные, отзывчивые. В сегодняшнее трудное время этот магазин меня очень порадовал своими расценками и вежливыми сотрудниками</p></blockquote></figure>
+    <figure class="customer-review"><figcaption><strong>Ольга</strong><span class="review-stars" role="img" aria-label="5 из 5 звёзд">★★★★★</span></figcaption><blockquote><p>Не первый год покупаем цветы в этом магазине, этот год стал не исключением. Цветы всегда свежие, букеты превосходные. Спасибо Вам)</p></blockquote></figure>
+    <figure class="customer-review"><figcaption><strong>Инкогнито</strong><span class="review-stars" role="img" aria-label="5 из 5 звёзд">★★★★★</span></figcaption><blockquote><p>Хочется выразить огромную благодарность, нашему любимому магазину Аура. Всегда свежие цветы, соберут композицию на любой вкус. Цены приемлемые. Персонал очень вежливый, обходительный</p></blockquote></figure>
+    <figure class="customer-review"><figcaption><strong>Татьяна</strong><span class="review-stars" role="img" aria-label="5 из 5 звёзд">★★★★★</span></figcaption><blockquote><p>Очень удобное расположение магазина. Красивые букеты. Приемлемые цены.</p></blockquote></figure>
+    <figure class="customer-review"><figcaption><strong>Олеся</strong><span class="review-stars" role="img" aria-label="5 из 5 звёзд">★★★★★</span></figcaption><blockquote><p>Отличные букеты с разным ценовым диапазоном. Заказываем с доставкой, всегда привозят свежие цветы</p></blockquote></figure>
+  </div>
+  <div class="review-controls" aria-label="Переключение отзывов">
+    <button class="review-arrow" type="button" data-review-prev aria-label="Предыдущий отзыв" aria-controls="reviewTrack"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>
+    <span class="review-position" aria-live="polite" aria-atomic="true">1 / 5</span>
+    <button class="review-arrow" type="button" data-review-next aria-label="Следующий отзыв" aria-controls="reviewTrack"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
+  </div>
+  <a class="all-reviews-link" href="https://yandex.ru/maps/org/aura/235676666509/reviews/" target="_blank" rel="noopener">Читать все отзывы покупателей</a>
 </section>
 
 <section class="faq" id="faq">
@@ -1646,7 +1661,10 @@
 
 <section class="questions" aria-labelledby="questionsTitle">
   <h2 class="section-title" id="questionsTitle">Остались вопросы?</h2>
-  <a class="btn btn-primary questions-button" href="https://max.ru/id560903131285_bot" target="_blank" rel="noopener">Написать в Макс</a>
+  <div class="questions-actions">
+    <a class="btn btn-primary questions-button" href="tel:+79033676077">Позвонить</a>
+    <a class="btn btn-ghost questions-button" href="https://max.ru/id560903131285_bot" target="_blank" rel="noopener">Написать в Макс</a>
+  </div>
 </section>
 
 <footer class="site-footer footer-fade">
@@ -2672,5 +2690,36 @@
 })();
 </script>
 
+<script>
+(function () {
+  var track = document.getElementById('reviewTrack');
+  var cards = Array.from(track.children);
+  var position = document.querySelector('.review-position');
+  function current() { return Math.round(track.scrollLeft / (track.clientWidth + 20)); }
+  function sync() {
+    var index = Math.min(cards.length - 1, Math.max(0, current()));
+    position.textContent = (index + 1) + ' / ' + cards.length;
+    track.style.height = cards[index].offsetHeight + 'px';
+  }
+  function move(direction) {
+    var index = (current() + direction + cards.length) % cards.length;
+    track.scrollTo({ left: index * (track.clientWidth + 20), behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
+  }
+  document.querySelector('[data-review-prev]').addEventListener('click', function () { move(-1); });
+  document.querySelector('[data-review-next]').addEventListener('click', function () { move(1); });
+  track.addEventListener('keydown', function (event) {
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+      event.preventDefault(); move(event.key === 'ArrowLeft' ? -1 : 1);
+    }
+  });
+  track.addEventListener('scroll', sync, { passive: true });
+  window.addEventListener('resize', function () { track.scrollTo({ left: 0, behavior: 'instant' }); sync(); });
+  if ('ResizeObserver' in window) {
+    var observer = new ResizeObserver(sync);
+    cards.forEach(function (card) { observer.observe(card); });
+  }
+  sync();
+})();
+</script>
 </body>
 </html>

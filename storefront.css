@@ -29,7 +29,7 @@ button, input, textarea { font: inherit; }
 a { color: var(--color-heading); }
 :focus-visible { outline: 2px solid var(--color-heading); outline-offset: 4px; }
 body:has(dialog[open]) { overflow: hidden; }
-.brand img { width: 100px; height: 100px; }
+.brand img { width: 80px; height: 80px; }
 .topbar { padding-top: 24px; gap: 24px; }
 .topbar-nav { display: flex; align-items: center; gap: 24px; }
 .topbar-nav a, .topbar-phone, .topbar-hours { font-size: 17px; font-weight: 700; }
@@ -126,7 +126,7 @@ body:has(dialog[open]) { overflow: hidden; }
 @media (max-width: 767px) {
   .categories, .how-we-work, .promotions, .reviews, .faq, .location, .delivery, .bouquet-help { padding: var(--section-gap-mobile) 16px; }
   .topbar { padding-top: 16px; gap: 12px; }
-  .brand img { width: 88px; height: 88px; }
+  .brand img { width: 64px; height: 64px; }
   .topbar-meta { display: grid; grid-template-columns: 1fr 44px; align-items: center; gap: 0 8px; }
   .topbar-hours { grid-column: 1; font-size: 14px; }
   .topbar-phone { grid-column: 1; font-size: 16px; }
@@ -241,4 +241,35 @@ body:has(dialog[open]) { overflow: hidden; }
 /* Product titles remain visually consistent while providing crawlable links. */
 .product-title a { color: inherit; text-decoration: none; }
 .product-title a:hover { text-decoration: underline; text-underline-offset: 4px; }
-.promo-preorder-title { margin: 0; color: var(--color-heading); font-family: var(--font-body); font-size: 24px; font-weight: 700; line-height: 1.3; }
+.promo-preorder-title { margin: 0; color: var(--color-heading); font-family: var(--font-heading); font-size: 24px; font-weight: 700; line-height: 1.3; }
+
+/* Heading and body typography share one pair of font variables. */
+h1, h2, h3, h4, h5, h6,
+h1[class], h2[class], h3[class], h4[class], h5[class], h6[class] { font-family: var(--font-heading); }
+button, input, textarea, select { font-family: var(--font-body); }
+.pickup-map-link { display: block; margin-top: 8px; color: var(--color-heading); text-decoration: underline; text-underline-offset: 4px; }
+.questions-actions { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.questions-actions .btn-ghost { border-color: var(--color-heading); }
+.customer-reviews { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; text-align: left; }
+.customer-review { margin: 0; padding: 24px; background: var(--color-bg-card, #fff); border: 1px solid var(--color-hairline); border-radius: 16px; }
+.customer-review figcaption { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.customer-review strong { color: var(--color-heading); }
+.review-stars { color: var(--color-accent); font-size: 18px; letter-spacing: 2px; white-space: nowrap; }
+.customer-review blockquote { margin: 16px 0 0; }
+.customer-review p { margin: 0; font-size: 16px; line-height: 1.65; overflow-wrap: break-word; }
+.all-reviews-link { display: inline-block; margin-top: 24px; color: var(--color-text-primary); text-decoration: underline; text-underline-offset: 4px; line-height: 1.6; }
+@media (min-width: 768px) { .steps-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 767px) { .customer-review { padding: 20px; } }
+@media (min-width: 768px) and (max-width: 1100px) {
+  .topbar-nav { padding-left: 16px; padding-right: 22px; }
+}
+.review-arrow { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; border: 1px solid rgba(31,77,58,.2); border-radius: 50%; color: var(--color-heading); background: transparent; cursor: pointer; }
+.review-arrow svg { width: 18px; height: 18px; }
+.review-arrow:hover { background: rgba(31,77,58,.08); }
+.review-arrow:focus-visible, .customer-reviews:focus-visible { outline: 2px solid var(--color-heading); outline-offset: 3px; }
+.review-position { font-size: 14px; color: var(--color-text-primary); min-width: 48px; text-align: center; }
+@media (min-width: 768px) { .questions-actions { flex-direction: row; justify-content: center; } .questions-actions .questions-button { width: 280px; } }
+.customer-reviews { display: flex; align-items: flex-start; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain; max-width: 760px; margin-inline: auto; }
+.customer-reviews::-webkit-scrollbar { display: none; }
+.customer-review { flex: 0 0 100%; min-width: 0; scroll-snap-align: start; }
+.review-controls { display: flex; justify-content: center; align-items: center; gap: 16px; margin-top: 16px; }

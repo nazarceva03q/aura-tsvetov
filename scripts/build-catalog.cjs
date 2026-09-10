@@ -18,6 +18,9 @@ function write(url, title, description, content, schema) {
 <title>${escape(title)}</title><meta name="description" content="${escape(description)}"><meta name="robots" content="index, follow, max-image-preview:large">
 <link rel="canonical" href="${base}/${url}/"><link rel="icon" href="/favicon.ico" sizes="32x32"><link rel="icon" type="image/png" sizes="512x512" href="/favicon-512.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <meta property="og:type" content="website"><meta property="og:locale" content="ru_RU"><meta property="og:title" content="${escape(title)}"><meta property="og:description" content="${escape(description)}"><meta property="og:url" content="${base}/${url}/"><meta property="og:image" content="${base}${schema.image || '/og-image.jpg'}"><meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=PT+Serif:wght@400;700&amp;family=Inter:wght@400;500;600;700&amp;subset=cyrillic,cyrillic-ext,latin&amp;display=swap">
 <link rel="stylesheet" href="/catalog.css"><script type="application/ld+json">${json({'@context':'https://schema.org',...schema,image:schema.image ? base+schema.image : undefined})}</script>
 </head><body><header><a class="brand" href="/">Аура</a><span>Цветочный магазин · Оренбург</span><a href="tel:${business.phone}">${business.phoneDisplay}</a></header>
 <main>${content}</main><footer><p>Аура · ${escape(business.city)}, ${escape(business.address)} · ${escape(business.hours)}</p><p>${escape(business.delivery)} ${escape(business.deliveryOffer)}</p><p>${escape(business.payment)}</p><a href="/">На главную</a> · <a href="${business.mapsUrl}">Мы на карте</a> · <a href="/#doc=privacy">Политика конфиденциальности</a></footer></body></html>\n`);
