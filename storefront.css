@@ -125,8 +125,7 @@ body:has(dialog[open]) { overflow: hidden; }
 }
 @media (max-width: 767px) {
   .categories, .how-we-work, .promotions, .reviews, .faq, .location, .delivery, .bouquet-help { padding: var(--section-gap-mobile) 16px; }
-  /* The 32px MAX image has 6px of inset inside its 44px touch target. */
-  .topbar { padding: 16px 2px 0 8px; gap: 12px; }
+  .topbar { padding-top: 16px; gap: 12px; }
   .brand img { width: 88px; height: 88px; }
   .topbar-meta { display: grid; grid-template-columns: 1fr 44px; align-items: center; gap: 0 8px; }
   .topbar-hours { grid-column: 1; font-size: 14px; }
@@ -166,9 +165,15 @@ body:has(dialog[open]) { overflow: hidden; }
 .topbar-meta { display: flex; flex-direction: column; gap: 0; }
 @media (max-width: 1100px) {
   .hero { padding-top: 72px; }
-  .topbar { display: grid; grid-template-columns: auto minmax(0, 1fr) 44px; gap: 12px; align-items: center; }
+  .topbar {
+    --header-edge: max(16px, env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px));
+    display: grid; grid-template-columns: auto minmax(0, 1fr) 44px; gap: 12px; align-items: center;
+    padding-left: var(--header-edge);
+    /* Align the visible MAX image, allowing for its 6px touch-target inset. */
+    padding-right: calc(var(--header-edge) - 6px);
+  }
   .topbar .brand { grid-column: 1; grid-row: 1; }
-  .topbar-nav { grid-row: 2; grid-column: 1 / -1; width: 100%; order: initial; justify-content: space-between; gap: 16px; }
+  .topbar-nav { grid-row: 2; grid-column: 1 / -1; width: 100%; order: initial; justify-content: space-between; gap: 16px; padding-right: 6px; }
   .max-contact { grid-row: 1; grid-column: 3; }
   .topbar-meta { grid-row: 1; grid-column: 2; align-items: flex-end; }
   .topbar-hours, .topbar-phone { min-height: 0; line-height: 1.5; white-space: nowrap; }
