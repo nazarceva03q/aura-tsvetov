@@ -32,6 +32,7 @@ const CATEGORIES = [
 ];
 
 const PRODUCTS = [
+  { id: 'buket-rozovoy-gortenzii', category: 'bukety', name: 'Букет из розовой гортензии', price: '1500 ₽' },
   { id: 'buket-1', category: 'bukety', name: 'Букет 1', price: '3000 ₽' },
   { id: 'buket-2', category: 'bukety', name: 'Букет 2', price: '2850 ₽' },
   { id: 'sbornyi-buket-3', category: 'bukety', name: 'Сборный букет 3', price: '3500 ₽' },

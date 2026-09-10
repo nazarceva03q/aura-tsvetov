@@ -16,6 +16,7 @@
 // функции extract*() в начале этого файла — остальной код трогать не нужно.
 
 const config = require('./config');
+const crypto = require('crypto');
 const store = require('./store');
 const maxApi = require('./maxApi');
 const notify = require('./notify');
@@ -171,6 +172,7 @@ async function handleAwaitingMessage(update, userId, session) {
 
   session.step = 'awaiting_phone';
   session.pendingText = text.trim();
+  session.name = extractAutoName(update) || session.name || '';
   await store.setSession(userId, session);
 
   await maxApi.sendMessage(
@@ -198,7 +200,7 @@ async function handleAwaitingPhone(update, userId, session) {
     return;
   }
 
-  const name = (contact && contact.name) || extractAutoName(update) || '';
+  const name = (contact && contact.name) || extractAutoName(update) || session.name || '';
   const normalizedPhone = notify.normalizePhone(phone);
 
   session.step = 'chatting';
@@ -228,7 +230,7 @@ async function forwardToOwner(userId, text, name, phone) {
     console.warn('[bot] MAX_OWNER_CHAT_ID не настроен, вопрос не переслан Олесе:', text);
     return;
   }
-  const questionId = 'q' + Date.now();
+  const questionId = 'q' + crypto.randomUUID();
   await store.saveQuestion(questionId, userId, text, name, phone);
   await sendAskerInfo(config.ownerChatId, name, userId, phone);
   await maxApi.sendMessage(
@@ -285,12 +287,15 @@ async function handleUpdate(update) {
     // store.wasRecentlyProcessed) – без этого при медленном ответе функции
     // Max мог прислать апдейт повторно, и Олеся получала один и тот же
     // вопрос/ответ по нескольку раз подряд.
-    const dedupKey =
+    const eventId = update.update_type === 'message_callback'
+      ? update.callback && update.callback.callback_id
+      : update.update_type === 'message_created' && update.message && update.message.body && update.message.body.mid;
+    const dedupKey = eventId ? update.update_type + ':' + userId + ':' + eventId :
       update.update_type + ':' + userId + ':' +
       (extractCallbackData(update) || extractMessageText(update) || '') + ':' +
       (update.timestamp || '');
-    if (await store.wasRecentlyProcessed(dedupKey)) {
-      console.log('[bot] дубликат апдейта, пропущено:', dedupKey);
+    if (await store.wasRecentlyProcessed(dedupKey, Boolean(eventId))) {
+      console.log('[bot] дубликат апдейта, пропущено');
       return;
     }
 
@@ -335,7 +340,7 @@ async function handleUpdate(update) {
       }
 
       // 'answer:' разрешён владелице всегда – это её кнопка под вопросом.
-      if (data.indexOf('answer:') === 0) return startAnswerFlow(userId, data.slice('answer:'.length));
+      if (isOwner && data.indexOf('answer:') === 0) return startAnswerFlow(userId, data.slice('answer:'.length));
 
       if (isOwner) return sendOwnerNotice(userId);
 
@@ -376,6 +381,7 @@ async function handleUpdate(update) {
     }
   } catch (err) {
     console.error('[bot] ошибка обработки апдейта:', err, JSON.stringify(update));
+    throw err;
   }
 }
 

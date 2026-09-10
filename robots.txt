@@ -1,4 +1,9 @@
 User-agent: *
 Allow: /
+Disallow: /bot/
+Disallow: /scripts/
+Disallow: /tests/
+Disallow: /artifacts/
+Disallow: /.tmp-tools/
 
 Sitemap: https://aura-flower.shop/sitemap.xml

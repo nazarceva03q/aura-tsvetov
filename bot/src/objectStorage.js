@@ -76,9 +76,10 @@ function signedRequest(method, bucket, objectKey, body, accessKey, secretKey) {
   };
 }
 
-function request(method, objectKey, body, config) {
+function request(method, objectKey, body, config, extraHeaders = {}) {
   return new Promise((resolve, reject) => {
     const { path, headers } = signedRequest(method, config.bucket, objectKey, body, config.accessKey, config.secretKey);
+    Object.assign(headers, extraHeaders);
     const data = body ? Buffer.from(body, 'utf8') : null;
     if (data) headers['Content-Length'] = data.length;
 
@@ -135,4 +136,13 @@ async function putJson(config, objectKey, data) {
   }
 }
 
-module.exports = { getJson, putJson };
+// Atomic across cloud function instances: only the first delivery claims the ID.
+async function createJsonOnce(config, objectKey, data) {
+  if (!config.bucket || !config.accessKey || !config.secretKey) throw new Error('Dedup storage is not configured');
+  const res = await request('PUT', objectKey, JSON.stringify(data), config, { 'If-None-Match': '*' });
+  if (res.status === 200) return true;
+  if (res.status === 412) return false;
+  throw new Error('Dedup conditional PUT failed: ' + res.status);
+}
+
+module.exports = { getJson, putJson, createJsonOnce };

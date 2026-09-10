@@ -1,6 +1,7 @@
 node_modules/
 .env
 data/*.json
+data/processed_updates/
 !data/.gitkeep
 yandex-deploy.zip
 _yandex_staging/

@@ -14,6 +14,7 @@
 // вызовов что на VM, что в Cloud Functions).
 
 const fs = require('fs');
+const crypto = require('crypto');
 const path = require('path');
 const config = require('./config');
 const objectStorage = require('./objectStorage');
@@ -104,19 +105,24 @@ async function clearSession(userId) {
   await writeJson('sessions', sessions);
 }
 
-// – Защита от повторной обработки одного и того же апдейта –
-// Наблюдался реальный случай: Max присылал один и тот же message_callback
-// несколько раз подряд (видимо, повторная доставка, если функция не
-// ответила достаточно быстро), и бот несколько раз пересылал Олесе одно и
-// то же. У Update-объекта нет отдельного update_id (подтверждено
-// документацией), поэтому дедуп – по составному ключу (тип + user_id +
-// содержимое + исходный timestamp события). Ключи протухают через 15
-// минут, чтобы файл не рос бесконечно и чтобы одинаковое повторное
-// действие человека (не ретрай, а реальное повторное нажатие спустя время)
-// не блокировалось навсегда.
+// Stable message/callback IDs are claimed atomically and retained across restarts.
+// Legacy events without IDs use the existing 15-minute fallback below.
 const DEDUP_WINDOW_MS = 15 * 60 * 1000;
 
-async function wasRecentlyProcessed(key) {
+async function wasRecentlyProcessed(key, stableId = false) {
+  if (stableId) {
+    const hash = crypto.createHash('sha256').update(key).digest('hex');
+    if (USE_S3) return !(await objectStorage.createJsonOnce(config.s3, 'processed_updates/' + hash + '.json', { claimedAt: new Date().toISOString() }));
+    const directory = path.join(DATA_DIR, 'processed_updates');
+    fs.mkdirSync(directory, { recursive: true });
+    try {
+      fs.writeFileSync(path.join(directory, hash + '.json'), JSON.stringify({ claimedAt: new Date().toISOString() }), { flag: 'wx' });
+      return false;
+    } catch (error) {
+      if (error.code === 'EEXIST') return true;
+      throw error;
+    }
+  }
   const seen = await readJson('recent_updates', {});
   const now = Date.now();
   for (const k of Object.keys(seen)) {

@@ -9,7 +9,7 @@ const root = path.resolve(__dirname, '..');
 function load(file, dependencies) {
   const sandbox = {
     module: { exports: {} }, __dirname: path.dirname(path.join(root, file)),
-    require(name) { if (!(name in dependencies)) throw Error('Unexpected dependency: ' + name); return dependencies[name]; },
+    require(name) { if (name === 'crypto') return require('node:crypto'); if (!(name in dependencies)) throw Error('Unexpected dependency: ' + name); return dependencies[name]; },
     console: { log() {}, warn() {}, error(...args) { throw Error(args.join(' ')); } },
     Buffer, setTimeout, clearTimeout
   };
@@ -57,11 +57,11 @@ test('website leads reach owner transport with source, product and first/repeat 
   }
 });
 
-test('all 22 website IDs and prices match the bot', () => {
+test('all 23 website IDs and prices match the bot', () => {
   const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
   const website = vm.runInNewContext('(' + html.match(/var CATALOG = (\{[\s\S]*?\n  \});/)[1] + ')');
   const products = Object.values(website).flat();
-  assert.equal(products.length, 22);
+  assert.equal(products.length, 23);
   assert.equal(catalog.PRODUCTS.length, products.length);
   for (const item of products) assert.equal(catalog.getProductById(item.id).price, item.price);
 });
@@ -71,6 +71,20 @@ test('owner notification uses catalog price and preserves product context', () =
   assert.match(card, /Цена: 3000 ₽/);
   assert.match(card, /Артикул: buket-1/);
   assert.match(card, /products\/buket-1.webp/);
+});
+
+test('pink hydrangea order reaches owner transport with verified price and image', async () => {
+  let sent;
+  const sender = load('bot/src/notify.js', {
+    './config': config, './catalog': catalog,
+    './store': { checkAndRecordCustomer: async () => ({ isRepeat: false }) },
+    './maxApi': { sendMessage: async (target, text) => { sent = { target, text }; return { ok: true }; } }
+  });
+  const handler = load('bot/index.js', { './src/config': config, './src/bot': {}, './src/notify': sender }).handler;
+  const result = await handler({ httpMethod: 'POST', body: JSON.stringify({ name: 'Тест', phone: '+79001234567', productId: 'buket-rozovoy-gortenzii', product: 'Букет из розовой гортензии', price: '1 ₽', imageUrl: 'https://aura-flower.shop/products/buket-rozovoy-gortenzii.webp', siteRef: 'https://aura-flower.shop/#category=bukety&product=buket-rozovoy-gortenzii' }) });
+  assert.equal(JSON.parse(result.body).ok, true);
+  assert.equal(sent.target.userId, config.ownerChatId);
+  for (const value of ['Букет из розовой гортензии', '1500 ₽', 'Артикул: buket-rozovoy-gortenzii', '/products/buket-rozovoy-gortenzii.webp']) assert.ok(sent.text.includes(value));
 });
 
 test('cloud form forwards context and reports delivery failure accurately', async () => {
@@ -89,6 +103,7 @@ test('cloud form forwards context and reports delivery failure accurately', asyn
 // – новый сценарий бота: согласие → вопрос → телефон → пересылка Олесе –
 
 function makeBotEnv() {
+  const seen = new Set();
   const sessions = {};
   const questions = {};
   const owner = [];
@@ -97,7 +112,7 @@ function makeBotEnv() {
     './config': config,
     './notify': { normalizePhone: notify.normalizePhone, formatPhone: notify.formatPhone },
     './store': {
-      wasRecentlyProcessed: async () => false,
+      wasRecentlyProcessed: async (key) => { if (seen.has(key)) return true; seen.add(key); return false; },
       getSession: async (id) => sessions[id] || { step: 'idle' },
       setSession: async (id, value) => { sessions[id] = value; },
       clearSession: async (id) => { delete sessions[id]; },
@@ -187,4 +202,60 @@ test("owner's answer reaches the client as a plain message with no label or butt
   assert.equal(env.client[0].text, 'Да, доставим сегодня!');
   assert.equal(env.client[0].rows, undefined);
   assert.equal(env.questions.q1.answered, true);
+});
+
+test('a new question after an answer includes identity once; retries and concurrent deliveries do not duplicate it', async () => {
+  const env = makeBotEnv();
+  env.sessions[3] = { step: 'chatting', name: 'Аня', phone: '79991234567' };
+  const message = (mid, text, userId = 3) => ({ update_type: 'message_created', timestamp: 1, message: { sender: { user_id: userId }, body: { mid, text } } });
+  await env.bot.handleUpdate(message('first', 'Есть розы?'));
+  const payload = env.owner.find(m => m.rows).rows[0][0].payload;
+  await env.bot.handleUpdate({ update_type: 'message_callback', callback: { callback_id: 'answer-click', user: { user_id: 999 }, payload } });
+  await env.bot.handleUpdate(message('owner-answer', 'Да', 999));
+  env.owner.length = 0;
+  const next = message('second', 'Есть розы?');
+  await Promise.all([env.bot.handleUpdate(next), env.bot.handleUpdate({ ...next, timestamp: 2000 }), env.bot.handleUpdate(next)]);
+  assert.equal(env.owner.length, 2); // Existing format: identity, then question with answer button.
+  assert.match(env.owner[0].text, /Аня/);
+  assert.match(env.owner[0].text, /\+7 \(999\) 123-45-67/);
+  assert.match(env.owner[1].text, /Есть розы/);
+  await env.bot.handleUpdate(message('third', 'Есть розы?'));
+  assert.equal(env.owner.length, 4); // A genuinely new ID must not be suppressed.
+});
+
+test('separate storage instances atomically claim the same stable ID only once', async () => {
+  const objects = new Set();
+  const dependencies = {
+    fs: {}, path: { join: () => 'unused' }, './config': { s3: { bucket: 'test' } },
+    './objectStorage': { createJsonOnce: async (config, key) => {
+      if (objects.has(key)) return false;
+      objects.add(key); return true;
+    } }
+  };
+  const first = load('bot/src/store.js', dependencies);
+  const second = load('bot/src/store.js', dependencies);
+  assert.deepEqual(await Promise.all([first.wasRecentlyProcessed('mid-1', true), second.wasRecentlyProcessed('mid-1', true)]), [false, true]);
+  assert.equal(await second.wasRecentlyProcessed('mid-1', true), true);
+  assert.equal(await second.wasRecentlyProcessed('mid-2', true), false);
+});
+
+test('conditional storage request uses If-None-Match and rejects storage failures', async () => {
+  let status = 200, sentHeaders;
+  const { EventEmitter } = require('node:events');
+  const storage = load('bot/src/objectStorage.js', {
+    https: { request: (options, callback) => {
+      sentHeaders = options.headers;
+      return { on() {}, write() {}, end() {
+        const response = new EventEmitter(); response.statusCode = status;
+        callback(response); response.emit('end');
+      } };
+    } }
+  });
+  const credentials = { bucket: 'test', accessKey: 'test', secretKey: 'test' };
+  assert.equal(await storage.createJsonOnce(credentials, 'processed/test.json', {}), true);
+  assert.equal(sentHeaders['If-None-Match'], '*');
+  status = 412;
+  assert.equal(await storage.createJsonOnce(credentials, 'processed/test.json', {}), false);
+  status = 503;
+  await assert.rejects(storage.createJsonOnce(credentials, 'processed/test.json', {}));
 });
