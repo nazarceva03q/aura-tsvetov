@@ -2,7 +2,7 @@ const test=require('node:test');const assert=require('node:assert/strict');const
 const root=path.resolve(__dirname,'..');
 test('sitemap destinations have canonical URLs, valid schemas and local image assets',()=>{
  const sitemap=fs.readFileSync(path.join(root,'sitemap.xml'),'utf8');
- const urls=[...sitemap.matchAll(/<loc>(.*?)<\/loc>/g)].map(m=>m[1]);assert.equal(urls.length,27);
+ const urls=[...sitemap.matchAll(/<loc>(.*?)<\/loc>/g)].map(m=>m[1]);assert.equal(urls.length,29);
  for(const url of urls){
  const file=path.join(root,new URL(url).pathname,'index.html');const html=fs.readFileSync(file,'utf8');
  assert.ok(html.includes('href="'+url+'"'),url);assert.equal((html.match(/<h1[> ]/g)||[]).length,1);

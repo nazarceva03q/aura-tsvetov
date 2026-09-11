@@ -57,13 +57,40 @@ test('website leads reach owner transport with source, product and first/repeat 
   }
 });
 
-test('all 23 website IDs and prices match the bot', () => {
+test('all 25 website IDs and prices match the bot', () => {
   const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
   const website = vm.runInNewContext('(' + html.match(/var CATALOG = (\{[\s\S]*?\n  \});/)[1] + ')');
   const products = Object.values(website).flat();
-  assert.equal(products.length, 23);
+  assert.equal(products.length, 25);
   assert.equal(catalog.PRODUCTS.length, products.length);
   for (const item of products) assert.equal(catalog.getProductById(item.id).price, item.price);
+});
+
+test('every catalog product reaches owner transport with verified price and photo', async () => {
+  const sent = [];
+  const sender = load('bot/src/notify.js', {
+    './config': config, './catalog': catalog,
+    './store': { checkAndRecordCustomer: async () => ({ isRepeat: false }) },
+    './maxApi': { sendMessage: async (target, text) => { sent.push({ target, text }); return { ok: true }; } }
+  });
+  const handler = load('bot/index.js', { './src/config': config, './src/bot': {}, './src/notify': sender }).handler;
+  for (const product of catalog.PRODUCTS) {
+    const photoFile = ({ 'gortenziya-1': 'gortenziya-poshtuchno', 'gortenziya-2': 'gortenziya-poshtuchno-2',
+      'sbornyi-buket-3': 'sbornyi-buket-3-1', 'kompozitsiya-1': 'kompozitsiya-1-1' })[product.id] || product.id;
+    const imageUrl = config.siteBaseUrl + '/products/' + photoFile + '.webp';
+    assert.ok(fs.existsSync(path.join(root, 'products', photoFile + '.webp')));
+    const response = await handler({ httpMethod: 'POST', body: JSON.stringify({
+      name: 'Тест', phone: '+79001234567', productId: product.id,
+      product: product.name, price: '1 ₽', imageUrl
+    }) });
+    assert.equal(JSON.parse(response.body).ok, true, product.id);
+    const card = sent.at(-1);
+    assert.equal(card.target.userId, config.ownerChatId);
+    assert.ok(card.text.includes(product.id));
+    assert.ok(card.text.includes(product.price));
+    assert.ok(card.text.includes(imageUrl));
+  }
+  assert.equal(sent.length, catalog.PRODUCTS.length);
 });
 
 test('owner notification uses catalog price and preserves product context', () => {
@@ -85,6 +112,24 @@ test('pink hydrangea order reaches owner transport with verified price and image
   assert.equal(JSON.parse(result.body).ok, true);
   assert.equal(sent.target.userId, config.ownerChatId);
   for (const value of ['Букет из розовой гортензии', '1500 ₽', 'Артикул: buket-rozovoy-gortenzii', '/products/buket-rozovoy-gortenzii.webp']) assert.ok(sent.text.includes(value));
+});
+
+test('new stem flower orders reach owner transport with catalog price, photo and site link', async () => {
+  const sent = [];
+  const sender = load('bot/src/notify.js', {
+    './config': config, './catalog': catalog,
+    './store': { checkAndRecordCustomer: async () => ({ isRepeat: false }) },
+    './maxApi': { sendMessage: async (target, text) => { sent.push({ target, text }); return { ok: true }; } }
+  });
+  const handler = load('bot/index.js', { './src/config': config, './src/bot': {}, './src/notify': sender }).handler;
+  for (const [id, name, price] of [['eustoma', 'Эустома', 'от 150 ₽'], ['gipsofil', 'Гипсофил', 'от 200 ₽']]) {
+    const siteRef = 'https://aura-flower.shop/#category=poshtuchno&product=' + id;
+    const imageUrl = 'https://aura-flower.shop/products/' + id + '.webp';
+    const response = await handler({ httpMethod: 'POST', body: JSON.stringify({ name: 'Тест', phone: '+79001234567', productId: id, product: name, price: '1 ₽', imageUrl, siteRef }) });
+    assert.equal(JSON.parse(response.body).ok, true);
+    assert.equal(sent.at(-1).target.userId, config.ownerChatId);
+    for (const value of [name, price, imageUrl, siteRef]) assert.ok(sent.at(-1).text.includes(value));
+  }
 });
 
 test('cloud form forwards context and reports delivery failure accurately', async () => {

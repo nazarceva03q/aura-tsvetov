@@ -32,6 +32,8 @@ const CATEGORIES = [
 ];
 
 const PRODUCTS = [
+  { id: 'eustoma', category: 'poshtuchno', name: 'Эустома', price: 'от 150 ₽' },
+  { id: 'gipsofil', category: 'poshtuchno', name: 'Гипсофил', price: 'от 200 ₽' },
   { id: 'buket-rozovoy-gortenzii', category: 'bukety', name: 'Букет из розовой гортензии', price: '1500 ₽' },
   { id: 'buket-1', category: 'bukety', name: 'Букет 1', price: '3000 ₽' },
   { id: 'buket-2', category: 'bukety', name: 'Букет 2', price: '2850 ₽' },
