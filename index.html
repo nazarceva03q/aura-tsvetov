@@ -643,6 +643,9 @@
   .product-photo .zoom-hint svg { width: 13px; height: 13px; }
   .product-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
   .photo-nav {
+    -webkit-appearance: none;
+    appearance: none;
+    padding: 0;
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
@@ -659,7 +662,7 @@
     transition: background var(--dur-fast) var(--ease-out);
   }
   .photo-nav:hover, .photo-nav:focus-visible { background: rgba(31, 30, 26, 0.65); }
-  .photo-nav svg { width: 16px; height: 16px; }
+  .photo-nav svg { display: block; width: 16px; height: 16px; flex: 0 0 16px; fill: none; stroke: #fff; }
   .photo-nav-prev { left: 8px; }
   .photo-nav-next { right: 8px; }
   .photo-dots {
