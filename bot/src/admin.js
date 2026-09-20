@@ -26,8 +26,6 @@
 // Cloud и, если что-то называется иначе, правьте только
 // extractPhotoAttachments() ниже (остальной код трогать не нужно).
 
-const crypto = require('crypto');
-const config = require('./config');
 const maxApi = require('./maxApi');
 const store = require('./store');
 const products = require('./products');

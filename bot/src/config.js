@@ -23,9 +23,23 @@ const path = require('path');
   });
 })();
 
+// user_id владелицы (MAX_OWNER_CHAT_ID) остаётся ЕДИНСТВЕННЫМ адресом, куда
+// уходят заявки/вопросы покупателей (notify.js, bot.js forwardToOwner) —
+// это не меняется. А вот доступ к МЕНЮ УПРАВЛЕНИЯ (admin.js — Добавить/
+// Изменить/Удалить товар, Заявки) может быть у нескольких user_id сразу:
+// MAX_OWNER_CHAT_ID всегда в их числе (её доступ ничего не отбирает), плюс
+// через запятую можно перечислить ещё людей в MAX_ADMIN_CHAT_IDS — например,
+// разработчика, который хочет проверить, что получилось, тем же меню, что
+// видит владелица. Пусто в MAX_ADMIN_CHAT_IDS — доступ только у владелицы,
+// как и раньше.
+const ownerChatId = process.env.MAX_OWNER_CHAT_ID || '';
+const extraAdminIds = (process.env.MAX_ADMIN_CHAT_IDS || '').split(',').map((s) => s.trim()).filter(Boolean);
+const adminChatIds = Array.from(new Set([ownerChatId, ...extraAdminIds].filter(Boolean)));
+
 const config = {
   botToken: process.env.MAX_BOT_TOKEN || '',
-  ownerChatId: process.env.MAX_OWNER_CHAT_ID || '',
+  ownerChatId,
+  adminChatIds,
   webhookSecret: process.env.MAX_WEBHOOK_SECRET || '',
   siteBaseUrl: (process.env.SITE_BASE_URL || 'https://aura-flower.shop').replace(/\/$/, ''),
   port: parseInt(process.env.PORT, 10) || 3000,

@@ -325,7 +325,7 @@ async function handleUpdate(update) {
     // вопросом покупателя (answer:<id>) и сам ответ (шаг awaiting_answer) –
     // её законные действия, их не блокируем; всё остальное для неё –
     // заглушка ниже.
-    const isOwner = Boolean(config.ownerChatId) && String(userId) === String(config.ownerChatId);
+    const isOwner = config.adminChatIds.some((id) => String(userId) === String(id));
 
     // Команда /start – для покупателя всегда возвращает к приветствию и
     // заново запрашивает согласие; для владелицы – возвращает в меню

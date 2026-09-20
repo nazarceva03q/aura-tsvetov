@@ -16,7 +16,7 @@ function load(file, dependencies) {
   vm.runInNewContext(fs.readFileSync(path.join(root, file), 'utf8'), sandbox, { filename: file });
   return sandbox.module.exports;
 }
-const config = { siteBaseUrl: 'https://aura-flower.shop', ownerChatId: '999' };
+const config = { siteBaseUrl: 'https://aura-flower.shop', ownerChatId: '999', adminChatIds: ['999'] };
 const catalog = load('bot/src/catalog.js', { './config': config, './photoTokens.json': {} });
 // Товар не найден в динамическом каталоге (bot/src/products.js) ни в одном
 // из тестов ниже – notify.js в этом случае откатывается на статический
@@ -283,6 +283,29 @@ test('a new question after an answer includes identity once; retries and concurr
   assert.match(env.owner[1].text, /Есть розы/);
   await env.bot.handleUpdate(message('third', 'Есть розы?'));
   assert.equal(env.owner.length, 4); // A genuinely new ID must not be suppressed.
+});
+
+test('a second admin id (MAX_ADMIN_CHAT_IDS) gets the owner menu too, without displacing the primary owner', async () => {
+  const multiAdminConfig = { siteBaseUrl: 'https://aura-flower.shop', ownerChatId: '999', adminChatIds: ['999', '555'] };
+  const menuCalls = [];
+  const bot = load('bot/src/bot.js', {
+    './config': multiAdminConfig,
+    './notify': { normalizePhone: notify.normalizePhone, formatPhone: notify.formatPhone },
+    './store': {
+      wasRecentlyProcessed: async () => false,
+      getSession: async () => ({ step: 'idle' }),
+      setSession: async () => {},
+      clearSession: async () => {}
+    },
+    './maxApi': { sendMessage: async () => ({ ok: true }), callbackButton: (text, payload) => ({ type: 'callback', text, payload }) },
+    './admin': { isAdminStep: () => false, sendMenu: async (userId) => { menuCalls.push(userId); }, handleCallback: async () => false, handleMessage: async () => {} }
+  });
+
+  await bot.handleUpdate({ update_type: 'bot_started', user: { user_id: 999 } });
+  await bot.handleUpdate({ update_type: 'bot_started', user: { user_id: 555 } });
+  await bot.handleUpdate({ update_type: 'bot_started', user: { user_id: 42 } }); // обычный покупатель – меню не должно вызваться
+
+  assert.deepEqual(menuCalls, [999, 555]);
 });
 
 test('separate storage instances atomically claim the same stable ID only once', async () => {
