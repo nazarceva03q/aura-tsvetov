@@ -42,6 +42,18 @@ function backRow() {
   return [maxApi.callbackButton('⬅️ В меню', 'admin:menu')];
 }
 
+// Защита от нажатия УСТАРЕВШЕЙ кнопки — Max не убирает кнопки из старых
+// сообщений в истории чата, поэтому Олеся технически может нажать,
+// например, «✏️ Название» под уже сохранённым/отменённым товаром, когда
+// текущая сессия — снова меню (без черновика). Без этой проверки такие
+// обработчики упали бы (session.draft.* от undefined) — вместо этого
+// просто вежливо просим начать заново.
+async function requireDraft(userId, session) {
+  if (session && session.draft && typeof session.draft === 'object') return true;
+  await sendMenu(userId, 'Эта кнопка уже устарела (черновик товара не сохранился). Начните заново:');
+  return false;
+}
+
 function menuRows() {
   return [
     [maxApi.callbackButton('➕ Добавить товар', 'admin:add')],
@@ -89,6 +101,7 @@ async function startAdd(userId) {
 }
 
 async function pickCategory(userId, session, categoryIndex) {
+  if (!(await requireDraft(userId, session))) return;
   const category = products.CATEGORY_NAMES[categoryIndex];
   if (!category) {
     await maxApi.sendMessage({ userId }, 'Не поняла выбор категории, попробуйте ещё раз.');
@@ -199,6 +212,7 @@ async function handlePhotosStep(update, userId, session) {
 }
 
 async function finishPhotos(userId, session) {
+  if (!(await requireDraft(userId, session))) return;
   const count = (session.draft.photos || []).length;
   if (!count) {
     await maxApi.sendMessage({ userId }, 'Нужно хотя бы одно фото. Пришлите фото товара.', photoStepRows());
@@ -246,6 +260,7 @@ async function sendPreview(userId, session) {
 }
 
 async function editField(userId, session, field) {
+  if (!(await requireDraft(userId, session))) return;
   if (field === 'category') {
     session.editingFromPreview = true;
     session.step = 'admin_add_category';
@@ -280,6 +295,7 @@ async function sendPhotoManageMenu(userId, session) {
 }
 
 async function removePhoto(userId, session, index) {
+  if (!(await requireDraft(userId, session))) return;
   const photos = session.draft.photos || [];
   if (index >= 0 && index < photos.length) photos.splice(index, 1);
   session.draft.photos = photos;
@@ -288,6 +304,7 @@ async function removePhoto(userId, session, index) {
 }
 
 async function addMorePhotos(userId, session) {
+  if (!(await requireDraft(userId, session))) return;
   session.editingFromPreview = true;
   session.step = stepForField('photos');
   await store.setSession(userId, session);
@@ -295,12 +312,14 @@ async function addMorePhotos(userId, session) {
 }
 
 async function backToPreview(userId, session) {
+  if (!(await requireDraft(userId, session))) return;
   session.step = 'admin_preview';
   await store.setSession(userId, session);
   await sendPreview(userId, session);
 }
 
 async function saveDraft(userId, session) {
+  if (!(await requireDraft(userId, session))) return;
   const draft = session.draft;
   try {
     const product = await products.saveProduct(draft.category, draft.id, {

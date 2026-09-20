@@ -208,6 +208,25 @@ test('full "add product" flow through admin.js publishes a product with the same
   assert.ok(saved.photos[0].startsWith('https://storage.yandexcloud.net/pub-test/products/'));
 });
 
+test('stale buttons from a finished flow (no draft in the current session) prompt to restart instead of crashing', async () => {
+  const env = makeAdminEnv();
+  const userId = '999';
+  // Меню сброшено (например, товар уже сохранён и добавлен новый диалог) —
+  // Max не убирает кнопки из старых сообщений, поэтому Олеся технически
+  // может нажать «✏️ Название»/«Готово»/«Сохранить» под давно закрытым
+  // товаром. Раньше это падало (session.draft.* от undefined).
+  await env.admin.sendMenu(userId);
+  assert.equal(env.sessions[userId].step, 'admin_idle');
+
+  for (const staleData of ['add:cat:0', 'edit:field:name', 'photos:done', 'photos:add', 'photos:back', 'photos:remove:0', 'preview:save']) {
+    env.owner.length = 0;
+    const handled = await env.admin.handleCallback(userId, env.sessions[userId], staleData);
+    assert.equal(handled, true, staleData);
+    assert.match(env.owner.at(-1).text, /устарела/, staleData);
+    assert.equal(env.sessions[userId].step, 'admin_idle', staleData);
+  }
+});
+
 test('"delete product" flow finds a fuzzy match and removes it after confirmation', async () => {
   const env = makeAdminEnv();
   const userId = '999';

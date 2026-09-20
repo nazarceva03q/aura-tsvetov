@@ -321,3 +321,42 @@ test('conditional storage request uses If-None-Match and rejects storage failure
   status = 503;
   await assert.rejects(storage.createJsonOnce(credentials, 'processed/test.json', {}));
 });
+
+test('putObject signs a binary (Buffer) body correctly and exposes a matching public URL', async () => {
+  let status = 200, sentHeaders, sentBody;
+  const { EventEmitter } = require('node:events');
+  const storage = load('bot/src/objectStorage.js', {
+    https: { request: (options, callback) => {
+      sentHeaders = options.headers;
+      const chunks = [];
+      return {
+        on() {},
+        write(chunk) { chunks.push(chunk); },
+        end() {
+          sentBody = Buffer.concat(chunks);
+          const response = new EventEmitter(); response.statusCode = status;
+          callback(response); response.emit('end');
+        }
+      };
+    } }
+  });
+  const credentials = { bucket: 'aura-catalog', accessKey: 'test', secretKey: 'test' };
+  const photoBytes = Buffer.from([0xff, 0xd8, 0xff, 0x00, 0x10, 0x20, 0x30]); // произвольные бинарные байты, не валидный UTF-8
+  const ok = await storage.putObject(credentials, 'products/test.jpg', photoBytes, 'image/jpeg');
+  assert.equal(ok, true);
+  assert.equal(sentHeaders['Content-Type'], 'image/jpeg');
+  // Тело должно уйти БАЙТ В БАЙТ как есть — сравнение через toString('utf8')
+  // здесь бы не поймало повреждение непечатаемых байтов, поэтому сверяем buffer.
+  assert.ok(sentBody.equals(photoBytes), 'binary body must reach the request unmodified');
+
+  // console.error в этом тестовом окружении намеренно бросает исключение
+  // (см. load() выше) — это тест-ловушка на любой необработанный лог
+  // ошибки, как и для остальных тестов objectStorage.js в этом файле,
+  // поэтому неудачный статус здесь проверяем через rejects, а не через
+  // возвращённое false (в реальном коде putObject именно возвращает
+  // false, не бросает — см. bot/src/admin.js, там результат проверяется).
+  status = 403;
+  await assert.rejects(storage.putObject(credentials, 'products/test.jpg', photoBytes, 'image/jpeg'));
+
+  assert.equal(storage.publicUrl(credentials, 'products/test.jpg'), 'https://storage.yandexcloud.net/aura-catalog/products/test.jpg');
+});
