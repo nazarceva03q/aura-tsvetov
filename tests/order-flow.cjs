@@ -383,3 +383,24 @@ test('putObject signs a binary (Buffer) body correctly and exposes a matching pu
 
   assert.equal(storage.publicUrl(credentials, 'products/test.jpg'), 'https://storage.yandexcloud.net/aura-catalog/products/test.jpg');
 });
+
+test('putBucketCors signs a bucket-level ?cors request (empty object key, cors subresource) correctly', async () => {
+  let sentPath, sentHeaders;
+  const { EventEmitter } = require('node:events');
+  const storage = load('bot/src/objectStorage.js', {
+    https: { request: (options, callback) => {
+      sentPath = options.path;
+      sentHeaders = options.headers;
+      return { on() {}, write() {}, end() {
+        const response = new EventEmitter(); response.statusCode = 200;
+        callback(response); response.emit('end');
+      } };
+    } }
+  });
+  const credentials = { bucket: 'aura-catalog', accessKey: 'test', secretKey: 'test' };
+  const ok = await storage.putBucketCors(credentials, '<CORSConfiguration></CORSConfiguration>');
+  assert.equal(ok, true);
+  assert.equal(sentPath, '/aura-catalog/?cors=');
+  assert.equal(sentHeaders['Content-Type'], 'application/xml');
+  assert.match(sentHeaders.Authorization, /^AWS4-HMAC-SHA256 Credential=test\//);
+});

@@ -37,14 +37,18 @@ function getSignatureKey(secretKey, dateStamp, region, service) {
   return hmac(kService, 'aws4_request');
 }
 
-// method: 'GET' | 'PUT'; objectKey: путь объекта в бакете (без ведущего /);
-// body: строка (для PUT) или '' (для GET).
-function signedRequest(method, bucket, objectKey, body, accessKey, secretKey) {
+// method: 'GET' | 'PUT'; objectKey: путь объекта в бакете (без ведущего /,
+// пустая строка — операция над самим бакетом, см. queryString ниже);
+// body: строка/Buffer (для PUT) или '' (для GET). queryString — подресурс
+// бакета без ведущего '?' (например, 'cors') — нужен только putBucketCors,
+// обычные операции с объектами его не передают.
+function signedRequest(method, bucket, objectKey, body, accessKey, secretKey, queryString) {
   const now = new Date();
   const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, ''); // YYYYMMDDTHHMMSSZ
   const dateStamp = amzDate.slice(0, 8);
 
-  const canonicalUri = '/' + bucket + '/' + objectKey;
+  const canonicalUri = '/' + bucket + (objectKey ? '/' + objectKey : '/');
+  const canonicalQueryString = queryString || '';
   const payloadHash = hash(body || '');
 
   const canonicalHeaders =
@@ -53,7 +57,7 @@ function signedRequest(method, bucket, objectKey, body, accessKey, secretKey) {
     'x-amz-date:' + amzDate + '\n';
   const signedHeaders = 'host;x-amz-content-sha256;x-amz-date';
 
-  const canonicalRequest = [method, canonicalUri, '', canonicalHeaders, signedHeaders, payloadHash].join('\n');
+  const canonicalRequest = [method, canonicalUri, canonicalQueryString, canonicalHeaders, signedHeaders, payloadHash].join('\n');
 
   const credentialScope = dateStamp + '/' + REGION + '/' + SERVICE + '/aws4_request';
   const stringToSign = ['AWS4-HMAC-SHA256', amzDate, credentialScope, hash(canonicalRequest)].join('\n');
@@ -66,7 +70,7 @@ function signedRequest(method, bucket, objectKey, body, accessKey, secretKey) {
     ', SignedHeaders=' + signedHeaders + ', Signature=' + signature;
 
   return {
-    path: canonicalUri,
+    path: canonicalUri + (canonicalQueryString ? '?' + canonicalQueryString : ''),
     headers: {
       Host: HOST,
       'X-Amz-Date': amzDate,
@@ -76,9 +80,9 @@ function signedRequest(method, bucket, objectKey, body, accessKey, secretKey) {
   };
 }
 
-function request(method, objectKey, body, config, extraHeaders = {}) {
+function request(method, objectKey, body, config, extraHeaders = {}, queryString) {
   return new Promise((resolve, reject) => {
-    const { path, headers } = signedRequest(method, config.bucket, objectKey, body, config.accessKey, config.secretKey);
+    const { path, headers } = signedRequest(method, config.bucket, objectKey, body, config.accessKey, config.secretKey, queryString);
     Object.assign(headers, extraHeaders);
     const data = body ? Buffer.from(body, 'utf8') : null;
     if (data) headers['Content-Length'] = data.length;
@@ -124,7 +128,7 @@ async function putJson(config, objectKey, data) {
     return false;
   }
   try {
-    const res = await request('PUT', objectKey, JSON.stringify(data, null, 2), config);
+    const res = await request('PUT', objectKey, JSON.stringify(data, null, 2), config, { 'Content-Type': 'application/json' });
     if (res.status !== 200) {
       console.error('[objectStorage] PUT ' + objectKey + ' -> ' + res.status, res.body);
       return false;
@@ -166,6 +170,31 @@ function publicUrl(config, objectKey) {
   return 'https://' + HOST + '/' + config.bucket + '/' + objectKey;
 }
 
+// Настройка CORS на самом бакете (не на бота — используется один раз,
+// вручную, через scripts/configure-cors.js) — без этого браузер молча
+// блокирует fetch() с сайта (aura-flower.shop) к catalog.json на другом
+// домене (storage.yandexcloud.net), даже если сам объект публично читаемый
+// и прекрасно открывается прямым переходом по ссылке или через curl —
+// проверка CORS применяется браузером только к запросам из JS, не к
+// обычной навигации и не к curl/серверным запросам.
+async function putBucketCors(config, corsXml) {
+  if (!config.bucket || !config.accessKey || !config.secretKey) {
+    console.warn('[objectStorage] YC_S3_*/YC_PUBLIC_S3_BUCKET не настроены, настройка CORS пропущена');
+    return false;
+  }
+  try {
+    const res = await request('PUT', '', corsXml, config, { 'Content-Type': 'application/xml' }, 'cors=');
+    if (res.status !== 200) {
+      console.error('[objectStorage] PUT ?cors -> ' + res.status, res.body);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error('[objectStorage] PUT ?cors упал:', e.message);
+    return false;
+  }
+}
+
 // Atomic across cloud function instances: only the first delivery claims the ID.
 async function createJsonOnce(config, objectKey, data) {
   if (!config.bucket || !config.accessKey || !config.secretKey) throw new Error('Dedup storage is not configured');
@@ -175,4 +204,4 @@ async function createJsonOnce(config, objectKey, data) {
   throw new Error('Dedup conditional PUT failed: ' + res.status);
 }
 
-module.exports = { getJson, putJson, createJsonOnce, putObject, publicUrl };
+module.exports = { getJson, putJson, createJsonOnce, putObject, publicUrl, putBucketCors };
