@@ -18,7 +18,12 @@ function load(file, dependencies) {
 }
 const config = { siteBaseUrl: 'https://aura-flower.shop', ownerChatId: '999' };
 const catalog = load('bot/src/catalog.js', { './config': config, './photoTokens.json': {} });
-const notify = load('bot/src/notify.js', { './config': config, './store': {}, './maxApi': {}, './catalog': catalog });
+// Товар не найден в динамическом каталоге (bot/src/products.js) ни в одном
+// из тестов ниже – notify.js в этом случае откатывается на статический
+// bot/src/catalog.js, поэтому все существующие проверки цены/фото не
+// меняются с появлением динамического каталога.
+const productsStub = { getProductById: async () => null };
+const notify = load('bot/src/notify.js', { './config': config, './store': { saveLead: async () => {} }, './maxApi': {}, './catalog': catalog, './products': productsStub });
 
 test('website leads reach owner transport with source, product and first/repeat status', async () => {
   const objects = {};
@@ -32,7 +37,7 @@ test('website leads reach owner transport with source, product and first/repeat 
   });
   const sent = [];
   const sender = load('bot/src/notify.js', {
-    './config': config, './store': store, './catalog': catalog,
+    './config': config, './store': store, './catalog': catalog, './products': productsStub,
     './maxApi': { sendMessage: async (target, text) => { sent.push({ target, text }); return { ok: true }; } }
   });
   const handler = load('bot/index.js', {
@@ -69,8 +74,8 @@ test('all 25 website IDs and prices match the bot', () => {
 test('every catalog product reaches owner transport with verified price and photo', async () => {
   const sent = [];
   const sender = load('bot/src/notify.js', {
-    './config': config, './catalog': catalog,
-    './store': { checkAndRecordCustomer: async () => ({ isRepeat: false }) },
+    './config': config, './catalog': catalog, './products': productsStub,
+    './store': { checkAndRecordCustomer: async () => ({ isRepeat: false }), saveLead: async () => {} },
     './maxApi': { sendMessage: async (target, text) => { sent.push({ target, text }); return { ok: true }; } }
   });
   const handler = load('bot/index.js', { './src/config': config, './src/bot': {}, './src/notify': sender }).handler;
@@ -81,44 +86,45 @@ test('every catalog product reaches owner transport with verified price and phot
     assert.ok(fs.existsSync(path.join(root, 'products', photoFile + '.webp')));
     const response = await handler({ httpMethod: 'POST', body: JSON.stringify({
       name: 'Тест', phone: '+79001234567', productId: product.id,
-      product: product.name, price: '1 ₽', imageUrl
+      product: product.name, price: '1 ₽', imageUrl, photoRef: imageUrl
     }) });
     assert.equal(JSON.parse(response.body).ok, true, product.id);
     const card = sent.at(-1);
     assert.equal(card.target.userId, config.ownerChatId);
-    assert.ok(card.text.includes(product.id));
+    assert.ok(card.text.includes(product.name));
+    assert.doesNotMatch(card.text, /Артикул|Понравилось фото/);
     assert.ok(card.text.includes(product.price));
     assert.ok(card.text.includes(imageUrl));
   }
   assert.equal(sent.length, catalog.PRODUCTS.length);
 });
 
-test('owner notification uses catalog price and preserves product context', () => {
-  const card = notify.buildCard({ productId: 'buket-1', productName: 'Букет 1', price: '1 ₽', imageUrl: 'https://aura-flower.shop/products/buket-1.webp' }, null, false);
+test('owner notification uses catalog price and preserves product context', async () => {
+  const card = await notify.buildCard({ productId: 'buket-1', productName: 'Букет 1', price: '1 ₽', imageUrl: 'https://aura-flower.shop/products/buket-1.webp' }, null);
   assert.match(card, /Цена: 3000 ₽/);
-  assert.match(card, /Артикул: buket-1/);
+  assert.doesNotMatch(card, /Артикул|Понравилось фото/);
   assert.match(card, /products\/buket-1.webp/);
 });
 
 test('pink hydrangea order reaches owner transport with verified price and image', async () => {
   let sent;
   const sender = load('bot/src/notify.js', {
-    './config': config, './catalog': catalog,
-    './store': { checkAndRecordCustomer: async () => ({ isRepeat: false }) },
+    './config': config, './catalog': catalog, './products': productsStub,
+    './store': { checkAndRecordCustomer: async () => ({ isRepeat: false }), saveLead: async () => {} },
     './maxApi': { sendMessage: async (target, text) => { sent = { target, text }; return { ok: true }; } }
   });
   const handler = load('bot/index.js', { './src/config': config, './src/bot': {}, './src/notify': sender }).handler;
   const result = await handler({ httpMethod: 'POST', body: JSON.stringify({ name: 'Тест', phone: '+79001234567', productId: 'buket-rozovoy-gortenzii', product: 'Букет из розовой гортензии', price: '1 ₽', imageUrl: 'https://aura-flower.shop/products/buket-rozovoy-gortenzii.webp', siteRef: 'https://aura-flower.shop/#category=bukety&product=buket-rozovoy-gortenzii' }) });
   assert.equal(JSON.parse(result.body).ok, true);
   assert.equal(sent.target.userId, config.ownerChatId);
-  for (const value of ['Букет из розовой гортензии', '1500 ₽', 'Артикул: buket-rozovoy-gortenzii', '/products/buket-rozovoy-gortenzii.webp']) assert.ok(sent.text.includes(value));
+  for (const value of ['Букет из розовой гортензии', '1500 ₽', '/products/buket-rozovoy-gortenzii.webp']) assert.ok(sent.text.includes(value));
 });
 
 test('new stem flower orders reach owner transport with catalog price, photo and site link', async () => {
   const sent = [];
   const sender = load('bot/src/notify.js', {
-    './config': config, './catalog': catalog,
-    './store': { checkAndRecordCustomer: async () => ({ isRepeat: false }) },
+    './config': config, './catalog': catalog, './products': productsStub,
+    './store': { checkAndRecordCustomer: async () => ({ isRepeat: false }), saveLead: async () => {} },
     './maxApi': { sendMessage: async (target, text) => { sent.push({ target, text }); return { ok: true }; } }
   });
   const handler = load('bot/index.js', { './src/config': config, './src/bot': {}, './src/notify': sender }).handler;
@@ -163,7 +169,8 @@ function makeBotEnv() {
       clearSession: async (id) => { delete sessions[id]; },
       saveQuestion: async (id, userId, text, name, phone) => { questions[id] = { userId, userName: name, userPhone: phone, question: text, answered: false }; },
       getQuestion: async (id) => questions[id] || null,
-      markQuestionAnswered: async (id) => { if (questions[id]) questions[id].answered = true; }
+      markQuestionAnswered: async (id) => { if (questions[id]) questions[id].answered = true; },
+      saveLead: async () => {}
     },
     './maxApi': {
       sendMessage: async (target, text, rows) => { (String(target.userId) === config.ownerChatId ? owner : client).push({ text, rows }); return { ok: true }; },
@@ -171,6 +178,16 @@ function makeBotEnv() {
       userMention: (label, id) => '[' + label + '](max://user/' + id + ')',
       callbackButton: (text, payload) => ({ type: 'callback', text, payload }),
       requestContactButton: (text) => ({ type: 'request_contact', text })
+    },
+    // Существующие тесты в этом файле не проверяют меню владелицы/каталог
+    // (bot/src/admin.js) – для них достаточно заглушки. Отдельный набор
+    // тестов на само admin.js и полный сценарий добавления товара – см.
+    // tests/admin-flow.cjs.
+    './admin': {
+      isAdminStep: () => false,
+      sendMenu: async () => {},
+      handleCallback: async () => false,
+      handleMessage: async () => {}
     }
   });
   return { bot, sessions, questions, owner, client };

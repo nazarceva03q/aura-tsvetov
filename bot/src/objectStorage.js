@@ -136,6 +136,36 @@ async function putJson(config, objectKey, data) {
   }
 }
 
+// Загрузка бинарного файла (фото товара) в ПУБЛИЧНЫЙ бакет — используется
+// products.js, когда владелица присылает боту фото при добавлении/изменении
+// товара. Бакет должен быть настроен на публичное чтение целиком (см.
+// bot/README.md, раздел «Публичный бакет для каталога») — тогда отдельный
+// ACL на объект не нужен, обычный подписанный PUT работает так же, как
+// putJson выше, просто с телом-Buffer и своим Content-Type.
+async function putObject(config, objectKey, buffer, contentType) {
+  if (!config.bucket || !config.accessKey || !config.secretKey) {
+    console.warn('[objectStorage] YC_PUBLIC_S3_BUCKET/YC_S3_* не настроены, загрузка', objectKey, 'пропущена');
+    return false;
+  }
+  try {
+    const res = await request('PUT', objectKey, buffer, config, { 'Content-Type': contentType || 'application/octet-stream' });
+    if (res.status !== 200) {
+      console.error('[objectStorage] PUT(binary) ' + objectKey + ' -> ' + res.status, res.body);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error('[objectStorage] PUT(binary) ' + objectKey + ' упал:', e.message);
+    return false;
+  }
+}
+
+// Публичный HTTPS-адрес объекта — работает только если бакет открыт на
+// чтение (см. комментарий выше у putObject).
+function publicUrl(config, objectKey) {
+  return 'https://' + HOST + '/' + config.bucket + '/' + objectKey;
+}
+
 // Atomic across cloud function instances: only the first delivery claims the ID.
 async function createJsonOnce(config, objectKey, data) {
   if (!config.bucket || !config.accessKey || !config.secretKey) throw new Error('Dedup storage is not configured');
@@ -145,4 +175,4 @@ async function createJsonOnce(config, objectKey, data) {
   throw new Error('Dedup conditional PUT failed: ' + res.status);
 }
 
-module.exports = { getJson, putJson, createJsonOnce };
+module.exports = { getJson, putJson, createJsonOnce, putObject, publicUrl };

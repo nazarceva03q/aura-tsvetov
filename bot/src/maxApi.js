@@ -132,6 +132,63 @@ async function sendMessage(target, text, rows, photoToken) {
   return callApi('POST', '/messages' + query, payload);
 }
 
+// Сообщение с фото по прямой HTTPS-ссылке (а не по token, как imageAttachment
+// выше) — используется только в bot/src/admin.js, для показа фото товаров,
+// загруженных владелицей через бота (там URL — это адрес в Yandex Object
+// Storage, а не заранее загруженный в Max файл, токена для него нет).
+// ВАЖНО: формат вложения "image" с полем "url" (вместо "token") не был
+// подтверждён живым запросом на момент написания кода (по документации
+// Max поддерживает оба способа для фото, но это стоит перепроверить по
+// логам после первого реального теста). Поэтому вызывающий код в admin.js
+// всегда проверяет result.ok и при неудаче повторяет отправку тем же
+// текстом без фото — так сценарий не подвиснет, даже если этот способ
+// вложения не сработает.
+async function sendPhotoUrlMessage(target, text, rows, photoUrl) {
+  if (!config.botToken) {
+    console.warn('[maxApi] нет MAX_BOT_TOKEN, сообщение с фото не отправлено:', text);
+    return { ok: false, status: 0, body: { error: 'no token' } };
+  }
+  const query = target.userId
+    ? '?user_id=' + encodeURIComponent(target.userId)
+    : '?chat_id=' + encodeURIComponent(target.chatId);
+  const payload = { text };
+  const attachments = [];
+  if (photoUrl) attachments.push({ type: 'image', payload: { url: photoUrl } });
+  if (rows && rows.length) attachments.push(keyboardAttachment(rows));
+  if (attachments.length) payload.attachments = attachments;
+  return callApi('POST', '/messages' + query, payload);
+}
+
+// Скачивает файл по HTTPS (используется в admin.js, чтобы забрать байты
+// фото, которое владелица прислала боту, и перезалить их в Object Storage —
+// см. комментарий в admin.js про то, зачем это нужно). Использует тот же
+// расширенный список доверенных корневых сертификатов, что и остальной
+// файл (см. заголовок), на случай если CDN фото Max тоже использует
+// российский государственный сертификат. Следует до 5 редиректов.
+function downloadBinary(url, redirectsLeft) {
+  if (redirectsLeft === undefined) redirectsLeft = 5;
+  return new Promise((resolve, reject) => {
+    https.get(url, { agent }, (res) => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location && redirectsLeft > 0) {
+        res.resume();
+        resolve(downloadBinary(res.headers.location, redirectsLeft - 1));
+        return;
+      }
+      if (res.statusCode !== 200) {
+        res.resume();
+        reject(new Error('downloadBinary: ' + url + ' -> ' + res.statusCode));
+        return;
+      }
+      const chunks = [];
+      res.on('data', (c) => chunks.push(c));
+      res.on('end', () => {
+        resolve({ buffer: Buffer.concat(chunks), contentType: res.headers['content-type'] || 'image/jpeg' });
+      });
+      res.on('error', reject);
+    }).on('error', reject);
+  });
+}
+
 // Сообщение с разметкой markdown (format: 'markdown', подтверждено
 // документацией POST /messages). Используется только там, где нужна
 // именно кликабельная ссылка на профиль по user_id — max://user/<id> (тоже
@@ -173,6 +230,8 @@ async function getMe() {
 
 module.exports = {
   sendMessage,
+  sendPhotoUrlMessage,
+  downloadBinary,
   sendMarkdownMessage,
   userMention,
   callbackButton,

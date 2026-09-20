@@ -38,6 +38,18 @@ const config = {
     bucket: process.env.YC_S3_BUCKET || '',
     accessKey: process.env.YC_S3_ACCESS_KEY || '',
     secretKey: process.env.YC_S3_SECRET_KEY || ''
+  },
+  // Отдельный, ПУБЛИЧНЫЙ (открытый на чтение) бакет — каталог товаров
+  // (catalog.json) и фото, загруженные владелицей через бота («Добавить
+  // товар» / «Изменить товар»). Сайт (index.html) читает catalog.json
+  // напрямую по HTTPS, без обращения к функции бота — см. bot/README.md,
+  // раздел «Публичный бакет для каталога». Ключи доступа те же, что у
+  // основного (приватного) бакета выше — один сервисный аккаунт может
+  // писать в оба бакета, если у него есть роль storage.editor на них.
+  s3Public: {
+    bucket: process.env.YC_PUBLIC_S3_BUCKET || '',
+    accessKey: process.env.YC_S3_ACCESS_KEY || '',
+    secretKey: process.env.YC_S3_SECRET_KEY || ''
   }
 };
 
@@ -49,6 +61,9 @@ if (!config.ownerChatId) {
 }
 if (!config.s3.bucket) {
   console.warn('[config] YC_S3_BUCKET не задан — используется локальное файловое хранилище (bot/data/*.json). На Cloud Functions это НЕ будет работать между вызовами, см. README.md.');
+}
+if (!config.s3Public.bucket) {
+  console.warn('[config] YC_PUBLIC_S3_BUCKET не задан — управление товарами через бота (добавить/изменить/удалить) работать не будет, см. README.md.');
 }
 
 module.exports = config;

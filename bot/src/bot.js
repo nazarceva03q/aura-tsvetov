@@ -1,8 +1,14 @@
-// Основная логика бота: разбор входящих апдейтов от Max и сценарий диалога
-// (согласие на обработку данных → вопрос → телефон → свободная переписка
-// с Олесей). Каталог/заказ/звонок из бота убраны — для этого на сайте есть
-// обычная форма; бот в Max теперь работает только как канал связи с
-// Олесей (согласие обязательно перед началом диалога, см. ТЗ).
+// Основная логика бота: разбор входящих апдейтов от Max и сценарий диалога.
+// Два независимых режима в зависимости от того, кто пишет боту:
+//   – ПОКУПАТЕЛЬ: согласие на обработку данных → вопрос → телефон →
+//     свободная переписка с Олесей (пересылка вопросов/ответов в обе
+//     стороны). Каталога/заказа/звонка в этом режиме нет — для этого на
+//     сайте есть обычная форма; бот здесь — канал связи с Олесей (согласие
+//     обязательно перед началом диалога, см. ТЗ).
+//   – ВЛАДЕЛИЦА (MAX_OWNER_CHAT_ID, isOwner ниже): меню управления
+//     магазином — добавить/изменить/удалить товар на сайте, посмотреть
+//     заявки. Вся эта логика — в bot/src/admin.js, здесь только маршрутизация
+//     (см. isOwner-ветки в handleUpdate).
 //
 // ВАЖНО про разбор апдейтов: официально подтверждены только базовые поля
 // Update-объекта (update_type, chat_id, user, timestamp) и типы событий
@@ -20,6 +26,7 @@ const crypto = require('crypto');
 const store = require('./store');
 const maxApi = require('./maxApi');
 const notify = require('./notify');
+const admin = require('./admin');
 
 // ---------- разбор апдейта (см. предупреждение выше) ----------
 
@@ -147,17 +154,15 @@ async function proceedAfterConsent(userId) {
 // Сюда приходят уведомления о заявках и пересланные вопросы – витрину
 // магазина в этом чате не показываем, даже если она случайно что-то нажмёт.
 
-async function sendOwnerGreeting(userId) {
-  await maxApi.sendMessage(
-    { userId },
-    'Здравствуйте! Это служебный чат бота «Аура цветов» — сюда будут приходить вопросы покупателей. Витрина магазина здесь не открывается.'
-  );
-}
-
+// Приветствие/меню владелицы теперь показывает bot/src/admin.js (кнопки
+// «Добавить/Изменить/Удалить товар», «Заявки» — см. ТЗ про управление
+// каталогом из бота). sendOwnerNotice — запасной вариант на случай, если
+// нажата кнопка/прислано сообщение, не распознанное ни admin.js, ни
+// текущим шагом сессии (например, устаревшая кнопка из старого сообщения).
 async function sendOwnerNotice(userId) {
-  await maxApi.sendMessage(
-    { userId },
-    'Это служебный чат уведомлений — витрина магазина здесь не открывается. Ответить покупателю можно кнопкой «Ответить» под его вопросом.'
+  await admin.sendMenu(
+    userId,
+    'Не распознала действие. Ответить покупателю можно кнопкой «Ответить» под его вопросом. Вот меню управления магазином:'
   );
 }
 
@@ -232,6 +237,13 @@ async function forwardToOwner(userId, text, name, phone) {
   }
   const questionId = 'q' + crypto.randomUUID();
   await store.saveQuestion(questionId, userId, text, name, phone);
+  await store.saveLead({
+    kind: 'question',
+    source: 'Чат бота Max',
+    name: name || '',
+    phone: phone ? notify.formatPhone(phone) : '',
+    question: text
+  });
   await sendAskerInfo(config.ownerChatId, name, userId, phone);
   await maxApi.sendMessage(
     { userId: config.ownerChatId },
@@ -315,20 +327,23 @@ async function handleUpdate(update) {
     // заглушка ниже.
     const isOwner = Boolean(config.ownerChatId) && String(userId) === String(config.ownerChatId);
 
-    // Команда /start – всегда возвращает к приветствию и заново запрашивает
-    // согласие, из любого места сценария (это не отдельная всегда-видимая
-    // кнопка в чате – в Max таких нет, см. README).
+    // Команда /start – для покупателя всегда возвращает к приветствию и
+    // заново запрашивает согласие; для владелицы – возвращает в меню
+    // управления магазином (см. bot/src/admin.js). Это не отдельная
+    // всегда-видимая кнопка в чате – в Max таких нет (см. README) – но
+    // /start и кнопка «⬅️ В меню», которая есть почти на каждом шаге
+    // admin.js, вместе дают тот же результат: меню всегда легко достать.
     if (update.update_type === 'message_created') {
       const cmdText = (extractMessageText(update) || '').trim().toLowerCase();
       if (cmdText === '/start') {
         await store.clearSession(userId);
-        if (isOwner) return sendOwnerGreeting(userId);
+        if (isOwner) return admin.sendMenu(userId);
         return sendGreeting(userId);
       }
     }
 
     if (update.update_type === 'bot_started') {
-      if (isOwner) return sendOwnerGreeting(userId);
+      if (isOwner) return admin.sendMenu(userId);
       return sendGreeting(userId);
     }
 
@@ -342,7 +357,12 @@ async function handleUpdate(update) {
       // 'answer:' разрешён владелице всегда – это её кнопка под вопросом.
       if (isOwner && data.indexOf('answer:') === 0) return startAnswerFlow(userId, data.slice('answer:'.length));
 
-      if (isOwner) return sendOwnerNotice(userId);
+      if (isOwner) {
+        const ownerSession = await store.getSession(userId);
+        const handled = await admin.handleCallback(userId, ownerSession, data);
+        if (!handled) return sendOwnerNotice(userId);
+        return;
+      }
 
       if (data === 'consent:start') return proceedAfterConsent(userId);
       // остальные callback'и в текущем сценарии не ожидаются – падаем в
@@ -354,7 +374,10 @@ async function handleUpdate(update) {
     const session = await store.getSession(userId);
 
     if (isOwner && session.step !== 'awaiting_answer') {
-      if (update.update_type === 'message_created') return sendOwnerNotice(userId);
+      if (update.update_type === 'message_created') {
+        if (admin.isAdminStep(session.step)) return admin.handleMessage(update, userId, session);
+        return sendOwnerNotice(userId);
+      }
       return;
     }
 

@@ -87,6 +87,30 @@ async function markQuestionAnswered(questionId) {
   }
 }
 
+// – Заявки (для кнопки «Заявки» в меню бота владелицы): и заказы с сайта
+// (notify.sendLeadNotification), и вопросы покупателей в чате (bot.js,
+// forwardToOwner) — единой лентой, самые новые первыми. Список и так
+// приходит владелице сообщениями в чат Max (это его «журнал» по умолчанию),
+// этот файл — просто дополнительная возможность отфильтровать и полистать
+// только заявки, не листая всю переписку. Храним не больше LEADS_LIMIT
+// последних записей, чтобы файл не рос бесконечно.
+const LEADS_LIMIT = 500;
+
+async function saveLead(entry) {
+  const leads = await readJson('leads', []);
+  leads.push(Object.assign({ createdAt: new Date().toISOString() }, entry));
+  while (leads.length > LEADS_LIMIT) leads.shift();
+  await writeJson('leads', leads);
+}
+
+// offset/limit — пагинация с конца списка (самые новые первыми).
+async function getLeadsPage(offset, limit) {
+  const leads = await readJson('leads', []);
+  const newestFirst = leads.slice().reverse();
+  const page = newestFirst.slice(offset || 0, (offset || 0) + (limit || 10));
+  return { items: page, total: newestFirst.length };
+}
+
 // – Состояние диалога с конкретным пользователем (шаг сценария, что уже собрано) –
 async function getSession(userId) {
   const sessions = await readJson('sessions', {});
@@ -141,6 +165,8 @@ module.exports = {
   saveQuestion,
   getQuestion,
   markQuestionAnswered,
+  saveLead,
+  getLeadsPage,
   getSession,
   setSession,
   clearSession,

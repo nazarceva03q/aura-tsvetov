@@ -2343,11 +2343,19 @@
     ]
   };
 
-  document.querySelectorAll('.cat-card').forEach(function (card) {
-    var items = CATALOG[card.dataset.category] || [];
-    var minimum = Math.min.apply(null, items.map(function (item) { return Number(item.price.replace(/\D/g, '')); }));
-    card.querySelector('.cat-price').textContent = 'от ' + minimum.toLocaleString('ru-RU') + ' ₽';
-  });
+  // Вынесено в функцию (а не разовый forEach) – пересчитывается ещё раз
+  // после подгрузки динамического каталога ниже (loadDynamicCatalog),
+  // когда цены/минимумы категорий могут измениться из-за товаров,
+  // добавленных/изменённых через бота.
+  function updateCategoryPriceLabels() {
+    document.querySelectorAll('.cat-card').forEach(function (card) {
+      var items = CATALOG[card.dataset.category] || [];
+      if (!items.length) return;
+      var minimum = Math.min.apply(null, items.map(function (item) { return Number(item.price.replace(/\D/g, '')); }));
+      card.querySelector('.cat-price').textContent = 'от ' + minimum.toLocaleString('ru-RU') + ' ₽';
+    });
+  }
+  updateCategoryPriceLabels();
   var catGrid = document.getElementById('catGrid');
   var catalogPanel = document.getElementById('catalogPanel');
   var cardIconSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="6" width="18" height="14" rx="2"/><circle cx="12" cy="13" r="3.5"/><path d="M8 6l1.5-2h5L16 6"/></svg>';
@@ -2486,6 +2494,31 @@
   catGrid.querySelector('.cat-card').setAttribute('aria-expanded', 'true');
   renderCatalog('Букеты'); catalogPanel.hidden = false;
   document.getElementById('categories').classList.remove('catalog-pending');
+
+  // – динамический каталог: товары, добавленные/изменённые/удалённые через
+  // бота Max владелицей (bot/src/admin.js, bot/src/products.js), хранятся
+  // JSON-файлом в публичном Yandex Object Storage (BUSINESS.catalogUrl) и
+  // подгружаются поверх товаров выше, тем же renderCatalog() – значит,
+  // дизайн карточки не может «поехать» (шрифты/размеры/кнопки/стрелки –
+  // тот же код, что и всегда). Если запрос не удался (сеть, ссылка ещё не
+  // заполнена в business.js) – остаётся исходный список выше, сайт не
+  // ломается и не показывает ошибку пользователю.
+  function applyDynamicCatalog(data) {
+    if (!data || typeof data !== 'object') return;
+    Object.keys(CATALOG).forEach(function (key) { delete CATALOG[key]; });
+    Object.keys(data).forEach(function (key) { CATALOG[key] = data[key]; });
+    updateCategoryPriceLabels();
+    var openCard = catGrid.querySelector('.cat-card[aria-expanded="true"]');
+    if (openCard) renderCatalog(openCard.getAttribute('data-category'));
+  }
+  function loadDynamicCatalog() {
+    if (!BUSINESS.catalogUrl) return;
+    fetch(BUSINESS.catalogUrl, { cache: 'no-store' })
+      .then(function (res) { return res.ok ? res.json() : null; })
+      .then(applyDynamicCatalog)
+      .catch(function () { /* оффлайн или бакет ещё не настроен – остаётся каталог выше */ });
+  }
+  loadDynamicCatalog();
   openFromSiteRef();
   window.addEventListener('hashchange', openFromSiteRef);
 

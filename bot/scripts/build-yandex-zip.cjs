@@ -4,8 +4,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const zlib = require('node:zlib');
 const root = path.resolve(__dirname, '..');
-const files = ['index.js', 'src/bot.js', 'src/catalog.js', 'src/config.js',
-  'src/maxApi.js', 'src/notify.js', 'src/objectStorage.js', 'src/store.js',
+const files = ['index.js', 'src/admin.js', 'src/bot.js', 'src/catalog.js', 'src/config.js',
+  'src/maxApi.js', 'src/notify.js', 'src/objectStorage.js', 'src/products.js', 'src/store.js',
   'src/photoTokens.json', 'certs/russian-trusted-ca-bundle.pem'];
 
 function crc32(bytes) {

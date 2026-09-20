@@ -24,12 +24,14 @@ OUT_PATH = os.path.join(BOT_DIR, 'yandex-deploy.zip')
 
 FILES = [
     'index.js',
+    'src/admin.js',
     'src/bot.js',
     'src/catalog.js',
     'src/config.js',
     'src/maxApi.js',
     'src/notify.js',
     'src/objectStorage.js',
+    'src/products.js',
     'src/store.js',
     'src/photoTokens.json',
     'certs/russian-trusted-ca-bundle.pem',
