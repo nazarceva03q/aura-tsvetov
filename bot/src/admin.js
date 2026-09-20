@@ -54,6 +54,7 @@ async function requireDraft(userId, session) {
 
 function menuRows() {
   return [
+    [maxApi.callbackButton('▶️ Старт', 'admin:menu')],
     [maxApi.callbackButton('➕ Добавить товар', 'admin:add')],
     [maxApi.callbackButton('✏️ Изменить товар', 'admin:edit')],
     [maxApi.callbackButton('🗑 Удалить товар', 'admin:delete')],
@@ -72,14 +73,21 @@ async function sendMenu(userId, text) {
 
 // ---------- добавление / изменение товара (общий экран предпросмотра) ----------
 
-function fieldPrompt(field) {
+function fieldPrompt(field, hasPhotos) {
   if (field === 'name') return 'Напишите название товара';
   if (field === 'price') return 'Напишите цену со знаком ₽';
   if (field === 'composition') {
     return 'Напишите состав букета по пунктам (каждый пункт с новой строки).\n' +
       'Если состав не нужно описывать, поставьте прочерк -.';
   }
-  if (field === 'photos') return 'Загрузите одно или несколько фото товара. Когда закончите — нажмите «Готово».';
+  if (field === 'photos') {
+    // Пока фото ещё ни одного нет, кнопке «Готово» жать некуда (finishPhotos
+    // всё равно откажет) — поэтому и текст, и (см. photoStepRows) кнопка
+    // появляются только после первого присланного фото.
+    return hasPhotos
+      ? 'Загрузите ещё фото товара. Когда закончите — нажмите «Готово».'
+      : 'Загрузите одно или несколько фото товара.';
+  }
   return 'Напишите значение';
 }
 
@@ -87,8 +95,14 @@ function stepForField(field) {
   return 'admin_field_' + field;
 }
 
-function photoStepRows() {
-  return [[maxApi.callbackButton('✅ Готово', 'photos:done')], backRow()];
+// «Готово» показываем только когда есть хотя бы одно фото — до первого
+// присланного фото жать там нечего (finishPhotos всё равно бы отказал),
+// это только сбивало с толку.
+function photoStepRows(hasPhotos) {
+  const rows = [];
+  if (hasPhotos) rows.push([maxApi.callbackButton('✅ Готово', 'photos:done')]);
+  rows.push(backRow());
+  return rows;
 }
 
 async function startAdd(userId) {
@@ -143,7 +157,8 @@ async function advanceAfterField(userId, session, field) {
   }
   session.step = stepForField(next);
   await store.setSession(userId, session);
-  await maxApi.sendMessage({ userId }, fieldPrompt(next), next === 'photos' ? photoStepRows() : [backRow()]);
+  const hasPhotos = (session.draft.photos || []).length > 0;
+  await maxApi.sendMessage({ userId }, fieldPrompt(next, hasPhotos), next === 'photos' ? photoStepRows(hasPhotos) : [backRow()]);
 }
 
 async function handleTextField(userId, session, field, text) {
@@ -189,7 +204,11 @@ function extractPhotoAttachments(update) {
 async function handlePhotosStep(update, userId, session) {
   const urls = extractPhotoAttachments(update);
   if (!urls.length) {
-    await maxApi.sendMessage({ userId }, 'Пришлите фото товара (одно или несколько) или нажмите «Готово».', photoStepRows());
+    const hasPhotos = (session.draft.photos || []).length > 0;
+    const text = hasPhotos
+      ? 'Пришлите фото товара (одно или несколько) или нажмите «Готово».'
+      : 'Пришлите фото товара (одно или несколько).';
+    await maxApi.sendMessage({ userId }, text, photoStepRows(hasPhotos));
     return;
   }
   session.draft.photos = session.draft.photos || [];
@@ -206,14 +225,14 @@ async function handlePhotosStep(update, userId, session) {
   }
   await store.setSession(userId, session);
   const count = session.draft.photos.length;
-  await maxApi.sendMessage({ userId }, 'Фото добавлено (' + count + ' шт.). Пришлите ещё или нажмите «Готово».', photoStepRows());
+  await maxApi.sendMessage({ userId }, 'Фото добавлено (' + count + ' шт.). Пришлите ещё или нажмите «Готово».', photoStepRows(count > 0));
 }
 
 async function finishPhotos(userId, session) {
   if (!(await requireDraft(userId, session))) return;
   const count = (session.draft.photos || []).length;
   if (!count) {
-    await maxApi.sendMessage({ userId }, 'Нужно хотя бы одно фото. Пришлите фото товара.', photoStepRows());
+    await maxApi.sendMessage({ userId }, 'Нужно хотя бы одно фото. Пришлите фото товара.', photoStepRows(false));
     return;
   }
   await advanceAfterField(userId, session, 'photos');
@@ -306,7 +325,9 @@ async function addMorePhotos(userId, session) {
   session.editingFromPreview = true;
   session.step = stepForField('photos');
   await store.setSession(userId, session);
-  await maxApi.sendMessage({ userId }, 'Пришлите фото товара. Когда закончите — нажмите «Готово».', photoStepRows());
+  const hasPhotos = (session.draft.photos || []).length > 0;
+  const text = hasPhotos ? 'Пришлите фото товара. Когда закончите — нажмите «Готово».' : 'Пришлите фото товара.';
+  await maxApi.sendMessage({ userId }, text, photoStepRows(hasPhotos));
 }
 
 async function backToPreview(userId, session) {
@@ -373,7 +394,7 @@ async function handleFindName(userId, session, text) {
     const { category, product } = matches[i];
     const photoUrl = product.photo || (product.photos && product.photos[0]);
     const text2 = matchCardText(product, category);
-    const rows = [[maxApi.callbackButton('Этот товар', 'find:pick:' + i)]];
+    const rows = [[maxApi.callbackButton('Этот товар', 'find:pick:' + i)], backRow()];
     if (photoUrl) {
       const result = await maxApi.sendPhotoUrlMessage({ userId }, text2, rows, photoUrl);
       if (!result.ok) await maxApi.sendMessage({ userId }, text2, rows);

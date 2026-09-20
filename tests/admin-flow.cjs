@@ -178,7 +178,11 @@ test('full "add product" flow through admin.js publishes a product with the same
 
   await env.admin.handleMessage({ message: { body: { text: '- Роза – 5 шт.\n- Эвкалипт – 2 ветки' } } }, userId, env.sessions[userId]);
   assert.deepEqual(Array.from(env.sessions[userId].draft.composition), ['Роза – 5 шт.', 'Эвкалипт – 2 ветки']);
-  assert.match(env.owner.at(-1).text, /фото/);
+  const photoPrompt = env.owner.at(-1);
+  assert.match(photoPrompt.text, /фото/);
+  // Пока фото ни одного нет – кнопки «Готово» быть не должно, только «В меню».
+  assert.equal(photoPrompt.rows.length, 1);
+  assert.equal(photoPrompt.rows[0][0].payload, 'admin:menu');
 
   // Одно сообщение с двумя фото сразу (альбом) – оба должны попасть в черновик.
   await env.admin.handleMessage({
@@ -186,6 +190,10 @@ test('full "add product" flow through admin.js publishes a product with the same
   }, userId, env.sessions[userId]);
   assert.equal(env.sessions[userId].draft.photos.length, 2);
   assert.equal(env.downloadedUrls.length, 2);
+  // Теперь, когда фото уже есть, «Готово» должна появиться.
+  const afterPhotos = env.owner.at(-1);
+  assert.equal(afterPhotos.rows[0][0].payload, 'photos:done');
+  assert.equal(afterPhotos.rows[1][0].payload, 'admin:menu');
 
   assert.equal(await env.admin.handleCallback(userId, env.sessions[userId], 'photos:done'), true);
   assert.equal(env.sessions[userId].step, 'admin_preview');
@@ -206,6 +214,23 @@ test('full "add product" flow through admin.js publishes a product with the same
   assert.deepEqual(Array.from(saved.composition), ['Роза – 5 шт.', 'Эвкалипт – 2 ветки']);
   assert.equal(saved.photos.length, 2);
   assert.ok(saved.photos[0].startsWith('https://storage.yandexcloud.net/pub-test/products/'));
+});
+
+test('the menu has an explicit Start button, and each search result has a "back to menu" button under "Этот товар"', async () => {
+  const env = makeAdminEnv();
+  const userId = '999';
+
+  await env.admin.sendMenu(userId);
+  const menu = env.owner.at(-1);
+  assert.ok(menu.rows.some((row) => row[0].payload === 'admin:menu' && /Старт/.test(row[0].text)));
+
+  await env.products.saveProduct('Букеты', null, { name: 'Тюльпан красный', price: '300 ₽', composition: [], photos: ['https://x/1.jpg'] });
+  await env.admin.handleCallback(userId, env.sessions[userId], 'admin:edit');
+  await env.admin.handleMessage({ message: { body: { text: 'тюльпан' } } }, userId, env.sessions[userId]);
+  const match = env.owner.at(-1);
+  assert.equal(match.rows.length, 2);
+  assert.equal(match.rows[0][0].payload, 'find:pick:0');
+  assert.equal(match.rows[1][0].payload, 'admin:menu');
 });
 
 test('stale buttons from a finished flow (no draft in the current session) prompt to restart instead of crashing', async () => {
