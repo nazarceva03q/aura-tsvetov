@@ -7,6 +7,15 @@ const root = path.resolve(__dirname, '..');
 
 // Mock transport and storage: tests never contact MAX or read bot secrets.
 function load(file, dependencies) {
+  if (!('./operation' in dependencies)) dependencies['./operation'] = require('../bot/src/operation');
+  if (!('./retention' in dependencies)) dependencies['./retention'] = require('../bot/src/retention');
+  if (!('./privateDb' in dependencies)) dependencies['./privateDb'] = { createPrivateDb(cfg, storage) {
+    // Compatibility adapter for old unit fixtures. Concurrency is tested separately against real CAS.
+    return {
+      get: async key => { const data = await storage.getJson(cfg, key, null); return data === null ? null : { data }; },
+      update: async (key, fn) => { const data = await storage.getJson(cfg, key, null); const next = fn(data); if (next !== undefined) await storage.putJson(cfg, key, next); return next === undefined ? data : next; }
+    };
+  } };
   const sandbox = {
     module: { exports: {} }, __dirname: path.dirname(path.join(root, file)),
     require(name) { if (name === 'crypto') return require('node:crypto'); if (!(name in dependencies)) throw Error('Unexpected dependency: ' + name); return dependencies[name]; },
@@ -23,6 +32,13 @@ const catalog = load('bot/src/catalog.js', { './config': config, './photoTokens.
 // bot/src/catalog.js, поэтому все существующие проверки цены/фото не
 // меняются с появлением динамического каталога.
 const productsStub = { getProductById: async () => null };
+test('storage 403 exposes only safe service error code without XML credentials', async () => {
+  const { EventEmitter } = require('node:events');
+  const storage = load('bot/src/objectStorage.js', { https: { request(options, callback) {
+    return { on() {}, end() { const res = new EventEmitter(); res.statusCode = 403; res.headers = {}; callback(res); res.emit('data', Buffer.from('<Error><Code>SignatureDoesNotMatch</Code><Secret>must-not-appear</Secret></Error>')); res.emit('end'); } };
+  } } });
+  await assert.rejects(storage.getVersioned({ bucket: 'synthetic', accessKey: 'synthetic', secretKey: 'synthetic' }, 'retention/control.json'), error => error.message === 'STORAGE_READ_403_SignatureDoesNotMatch');
+});
 const notify = load('bot/src/notify.js', { './config': config, './store': { saveLead: async () => {} }, './maxApi': {}, './catalog': catalog, './products': productsStub });
 
 test('website leads reach owner transport with source, product and first/repeat status', async () => {

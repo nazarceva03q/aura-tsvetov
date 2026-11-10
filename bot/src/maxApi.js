@@ -30,6 +30,8 @@ const path = require('path');
 const tls = require('tls');
 const config = require('./config');
 
+const crypto = require('crypto');
+const operation = require('./operation');
 const HOST = 'platform-api2.max.ru';
 
 const CA_BUNDLE_PATH = path.join(__dirname, '..', 'certs', 'russian-trusted-ca-bundle.pem');
@@ -50,7 +52,7 @@ try {
 
 const agent = new https.Agent({ ca: caList, keepAlive: true });
 
-function callApi(method, urlPath, body) {
+function rawCallApi(method, urlPath, body) {
   return new Promise((resolve, reject) => {
     const data = body ? Buffer.from(JSON.stringify(body)) : null;
     const headers = { Authorization: config.botToken };
@@ -74,18 +76,29 @@ function callApi(method, urlPath, body) {
           }
           const ok = res.statusCode >= 200 && res.statusCode < 300;
           if (!ok) {
-            console.error('[maxApi] ' + method + ' ' + urlPath + ' -> ' + res.statusCode, json);
+            console.error('[maxApi] HTTP ' + res.statusCode);
           }
           resolve({ ok, status: res.statusCode, body: json });
         });
       }
     );
     req.on('error', reject);
+    if (req.setTimeout) req.setTimeout(8000, () => req.destroy(new Error('MAX_TIMEOUT')));
     if (data) req.write(data);
     req.end();
   });
 }
 
+function callApi(method, urlPath, body) {
+  if (method !== 'POST' || !urlPath.startsWith('/messages?')) return rawCallApi(method, urlPath, body);
+  const entry = operation.next();
+  const fingerprint = crypto.createHash('sha256').update(urlPath + JSON.stringify(body)).digest('hex');
+  return require('./store').retention.send(() => rawCallApi(method, urlPath, body), entry?.id, { fingerprint, expiresAt: entry?.expiresAt });
+}
+async function deleteMessage(mid) {
+  const response = await rawCallApi('DELETE', '/messages?message_id=' + encodeURIComponent(mid));
+  return response.ok && response.body?.success === true;
+}
 // – кнопки –
 // Живой запрос показал, что поле называется "payload", а не "callback_data"
 // (как было в изначально найденной сводке по документации) — API вернул
@@ -118,7 +131,7 @@ function imageAttachment(token) {
 // и кнопками в одном сообщении.
 async function sendMessage(target, text, rows, photoToken) {
   if (!config.botToken) {
-    console.warn('[maxApi] нет MAX_BOT_TOKEN, сообщение не отправлено:', text);
+    throw Error('MAX_TOKEN_CONFIG');
     return { ok: false, status: 0, body: { error: 'no token' } };
   }
   const query = target.userId
@@ -145,7 +158,7 @@ async function sendMessage(target, text, rows, photoToken) {
 // вложения не сработает.
 async function sendPhotoUrlMessage(target, text, rows, photoUrl) {
   if (!config.botToken) {
-    console.warn('[maxApi] нет MAX_BOT_TOKEN, сообщение с фото не отправлено:', text);
+    throw Error('MAX_TOKEN_CONFIG');
     return { ok: false, status: 0, body: { error: 'no token' } };
   }
   const query = target.userId
@@ -198,7 +211,7 @@ function downloadBinary(url, redirectsLeft) {
 // чтобы случайные символы вроде * или _ в чужом тексте не ломали вид.
 async function sendMarkdownMessage(target, markdownText) {
   if (!config.botToken) {
-    console.warn('[maxApi] нет MAX_BOT_TOKEN, сообщение не отправлено:', markdownText);
+    throw Error('MAX_TOKEN_CONFIG');
     return { ok: false, status: 0, body: { error: 'no token' } };
   }
   const query = target.userId
@@ -229,6 +242,7 @@ async function getMe() {
 }
 
 module.exports = {
+  deleteMessage,
   sendMessage,
   sendPhotoUrlMessage,
   downloadBinary,

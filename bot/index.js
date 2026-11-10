@@ -84,6 +84,7 @@ module.exports.handler = async function (event, context) {
     // – заявка с сайта (форма «Оставить заявку») –
     if (data.phone) {
       const result = await notify.sendLeadNotification({
+        requestId: data.requestId || '',
         source: data.source || (data.category ? 'Сайт → форма → ' + data.category : 'Сайт → форма'),
         name: data.name || '',
         phone: data.phone,

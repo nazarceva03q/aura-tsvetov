@@ -97,6 +97,7 @@ async function sendLeadNotification(data) {
   const dynamicPhotoUrl = !photoToken && product ? (product.photo || (product.photos && product.photos[0]) || null) : null;
 
   await store.saveLead({
+    ...(data.requestId?{id:data.requestId}:{}),
     kind: 'order',
     source: data.source || 'Общая заявка',
     name: data.name || '',
@@ -107,7 +108,7 @@ async function sendLeadNotification(data) {
   });
 
   if (!config.ownerChatId) {
-    console.warn('[notify] MAX_OWNER_CHAT_ID не настроен, карточка не отправлена:\n' + text);
+    throw Error('OWNER_CONFIG');
     return { ok: false, text, repeatInfo };
   }
 
@@ -125,5 +126,10 @@ module.exports = {
   normalizePhone,
   formatPhone,
   buildCard,
-  sendLeadNotification
+  sendLeadNotification: data => {
+    if(data.requestId){const m=/^([a-z0-9]+)-[a-f0-9-]{36}$/.exec(data.requestId);const at=m?parseInt(m[1],36):NaN;if(!Number.isFinite(at)||at>Date.now()+300000||Date.now()-at>=30*86400000)throw Error('REQUEST_ID_EXPIRED');}
+    const fingerprint = require('crypto').createHash('sha256').update(JSON.stringify(data)).digest('hex');
+    const send=()=>require('./operation').run(data.requestId?'site:'+data.requestId:null,()=>sendLeadNotification(data));
+    return data.requestId ? store.retention.request(data.requestId, fingerprint, send) : send();
+  }
 };

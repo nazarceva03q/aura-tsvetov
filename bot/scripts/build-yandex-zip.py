@@ -24,6 +24,10 @@ OUT_PATH = os.path.join(BOT_DIR, 'yandex-deploy.zip')
 
 FILES = [
     'index.js',
+    'cleanup.js',
+    'src/operation.js',
+    'src/privateDb.js',
+    'src/retention.js',
     'src/admin.js',
     'src/bot.js',
     'src/catalog.js',
@@ -78,7 +82,13 @@ def main():
         info.create_system = 3
         z.writestr(info, PACKAGE_JSON)
 
-    print('Done:', OUT_PATH)
+    import shutil
+    shutil.copyfile(OUT_PATH, os.path.join(BOT_DIR, 'aura-max-bot.zip'))
+    shutil.copyfile(OUT_PATH, os.path.join(BOT_DIR, 'aura-max-cleanup.zip'))
+    with zipfile.ZipFile(OUT_PATH) as verify:
+        assert verify.testzip() is None
+        assert not any(name.startswith(('data/', 'node_modules/')) or name.endswith('.env') for name in verify.namelist())
+    print('Done: aura-max-bot.zip (index.handler), aura-max-cleanup.zip (cleanup.handler); no secrets/customer files.')
 
 
 if __name__ == '__main__':

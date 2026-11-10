@@ -232,7 +232,7 @@ async function handleChatting(update, userId, session) {
 
 async function forwardToOwner(userId, text, name, phone) {
   if (!config.ownerChatId) {
-    console.warn('[bot] MAX_OWNER_CHAT_ID не настроен, вопрос не переслан Олесе:', text);
+    throw Error('OWNER_CONFIG');
     return;
   }
   const questionId = 'q' + crypto.randomUUID();
@@ -291,9 +291,12 @@ async function handleUpdate(update) {
   try {
     const userId = extractUserId(update);
     if (!userId) {
-      console.warn('[bot] апдейт без определяемого user_id, пропущено:', JSON.stringify(update));
+      console.warn('[bot] missing user_id');
       return;
     }
+
+    const eventTime=Number(update.timestamp);
+    if(Number.isFinite(eventTime)&&eventTime>1000000000000&&eventTime<Date.now()-30*86400000)return;
 
     // Защита от повторной доставки одного и того же события Max (см.
     // store.wasRecentlyProcessed) – без этого при медленном ответе функции
@@ -317,7 +320,7 @@ async function handleUpdate(update) {
     // функция ещё падала на импорте, bot_started мог не долететь до этой
     // точки кода вообще – а любое следующее нажатие кнопки/сообщение всё
     // равно попадёт в этот лог.
-    console.log('[bot] update_type=' + update.update_type + ', user_id=' + userId);
+    console.log('[bot] update_type=' + update.update_type);
 
     // Олеся (MAX_OWNER_CHAT_ID) пишет боту в тот же чат, куда приходят
     // пересланные вопросы – без этой проверки бот вёл бы её через сценарий
@@ -350,7 +353,7 @@ async function handleUpdate(update) {
     if (update.update_type === 'message_callback') {
       const data = extractCallbackData(update);
       if (!data) {
-        console.warn('[bot] message_callback без callback_data, апдейт целиком:', JSON.stringify(update));
+        console.warn('[bot] missing callback data');
         return;
       }
 
@@ -403,9 +406,9 @@ async function handleUpdate(update) {
         if (update.update_type === 'message_created') return sendGreeting(userId);
     }
   } catch (err) {
-    console.error('[bot] ошибка обработки апдейта:', err, JSON.stringify(update));
+    console.error('[bot] update failed');
     throw err;
   }
 }
 
-module.exports = { handleUpdate };
+module.exports = { handleUpdate: update => {const event=update.callback?.callback_id||update.message?.body?.mid;return require('./operation').run(event?'max:'+update.update_type+':'+event:null,()=>handleUpdate(update))} };

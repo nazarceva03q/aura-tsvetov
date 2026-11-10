@@ -4,5 +4,10 @@ data/*.json
 data/processed_updates/
 !data/.gitkeep
 yandex-deploy.zip
+aura-max-bot.zip
+aura-max-cleanup.zip
+data/retention/
+data/**/*.lock
+data/**/*.tmp
 _yandex_staging/
 scripts/_photos_tmp/

@@ -91,10 +91,11 @@ function request(method, objectKey, body, config, extraHeaders = {}, queryString
       const chunks = [];
       res.on('data', (c) => chunks.push(c));
       res.on('end', () => {
-        resolve({ status: res.statusCode, body: Buffer.concat(chunks).toString('utf8') });
+        resolve({ status: res.statusCode, body: Buffer.concat(chunks).toString('utf8'), etag: res.headers && res.headers.etag });
       });
     });
     req.on('error', reject);
+    if (req.setTimeout) req.setTimeout(8000, () => req.destroy(new Error('STORAGE_TIMEOUT')));
     if (data) req.write(data);
     req.end();
   });
@@ -204,4 +205,33 @@ async function createJsonOnce(config, objectKey, data) {
   throw new Error('Dedup conditional PUT failed: ' + res.status);
 }
 
-module.exports = { getJson, putJson, createJsonOnce, putObject, publicUrl, putBucketCors };
+async function getVersioned(config, objectKey) {
+  const res = await request('GET', objectKey, '', config);
+  if (res.status === 404) return null;
+  if (res.status !== 200 || !res.etag) {
+    // Expose only the machine error code, never response XML, keys or signatures.
+    const match = /<Code>([A-Za-z0-9_]{1,80})<\/Code>/.exec(res.body || '');
+    throw Error('STORAGE_READ_' + res.status + (match ? '_' + match[1] : res.status === 200 ? '_MISSING_ETAG' : ''));
+  }
+  return { data: JSON.parse(res.body), etag: res.etag };
+}
+async function putConditional(config, objectKey, data, etag) {
+  const res = await request('PUT', objectKey, JSON.stringify(data), config, { 'Content-Type': 'application/json', ...(etag ? { 'If-Match': etag } : { 'If-None-Match': '*' }) });
+  if (res.status === 412 || res.status === 409) return false;
+  if (res.status !== 200) throw Error('STORAGE_WRITE_' + res.status);
+  return true;
+}
+async function removePrivate(config, objectKey) {
+  const res = await request('DELETE', objectKey, '', config);
+  if (![200, 204, 404].includes(res.status)) throw Error('STORAGE_DELETE_' + res.status);
+}
+async function listPrivate(config, prefix, after = '') {
+  const params = { 'list-type': '2', 'max-keys': '100', prefix, ...(after ? { 'start-after': after } : {}) };
+  const encode = s => encodeURIComponent(s).replace(/[!'()*]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase());
+  const query = Object.keys(params).sort().map(k => encode(k) + '=' + encode(params[k])).join('&');
+  const res = await request('GET', '', '', config, {}, query);
+  if (res.status !== 200) throw Error('STORAGE_LIST_' + res.status);
+  const decode = s => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&');
+  return { keys: [...res.body.matchAll(/<Key>([^<]+)<\/Key>/g)].map(m => decode(m[1])).filter(k => k.startsWith(prefix)), more: /<IsTruncated>true<\/IsTruncated>/.test(res.body) };
+}
+module.exports = { getJson, putJson, createJsonOnce, putObject, publicUrl, putBucketCors, getVersioned, putConditional, removePrivate, listPrivate };

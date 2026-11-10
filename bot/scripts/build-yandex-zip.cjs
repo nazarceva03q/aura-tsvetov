@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const zlib = require('node:zlib');
 const root = path.resolve(__dirname, '..');
-const files = ['index.js', 'src/admin.js', 'src/bot.js', 'src/catalog.js', 'src/config.js',
+const files = ['index.js', 'cleanup.js', 'src/operation.js', 'src/privateDb.js', 'src/retention.js', 'src/admin.js', 'src/bot.js', 'src/catalog.js', 'src/config.js',
   'src/maxApi.js', 'src/notify.js', 'src/objectStorage.js', 'src/products.js', 'src/store.js',
   'src/photoTokens.json', 'certs/russian-trusted-ca-bundle.pem'];
 
@@ -52,4 +52,5 @@ end.writeUInt32LE(0x06054b50, 0); end.writeUInt16LE(entries.length, 8);
 end.writeUInt16LE(entries.length, 10); end.writeUInt32LE(central.length, 12);
 end.writeUInt32LE(offset, 16);
 fs.writeFileSync(path.join(root, 'yandex-deploy.zip'), Buffer.concat([...localParts, central, end]));
+for (const name of ['aura-max-bot.zip', 'aura-max-cleanup.zip']) fs.copyFileSync(path.join(root, 'yandex-deploy.zip'), path.join(root, name));
 console.log('Built bot/yandex-deploy.zip with ' + entries.length + ' entries (no .env).');
